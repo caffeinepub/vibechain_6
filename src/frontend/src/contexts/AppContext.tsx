@@ -30,7 +30,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { actor } = useActor();
   const { identity } = useInternetIdentity();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  // Start as true so we show the loading spinner while the actor initializes,
+  // preventing a false flash of SetupProfilePage for existing users.
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
 
   const refreshProfile = useCallback(async () => {

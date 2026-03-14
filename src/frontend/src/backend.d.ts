@@ -95,6 +95,7 @@ export interface backendInterface {
     joinCircle(name: string): Promise<void>;
     leaveCircle(name: string): Promise<void>;
     rejectFriendRequest(from: Principal): Promise<void>;
+    removeFromFriendPlaylist(playlistId: string, index: bigint): Promise<void>;
     removeFromPlaylist(playlistId: string, index: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     sendFriendRequest(to: Principal): Promise<void>;

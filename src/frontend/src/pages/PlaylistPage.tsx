@@ -115,6 +115,19 @@ export function PlaylistPage() {
     toast.success(`Playing "${playlist.name}"`);
   };
 
+  const handlePlayFromTrack = (playlist: PlaylistView, fromIndex: number) => {
+    if (playlist.tracks.length === 0) return;
+    const tracks: Track[] = playlist.tracks.map((t) => ({
+      youtubeId: t.youtubeId,
+      title: t.songTitle,
+      artist: t.artistName,
+      thumbnail: `https://img.youtube.com/vi/${t.youtubeId}/mqdefault.jpg`,
+    }));
+    const queue = tracks.slice(fromIndex);
+    playTrack(queue[0], queue);
+    toast.success(`Playing from "${playlist.tracks[fromIndex].songTitle}"`);
+  };
+
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -143,7 +156,7 @@ export function PlaylistPage() {
             data-ocid="playlist.open_modal_button"
           >
             <Plus className="h-4 w-4" />
-            New Playlist
+            <span className="hidden sm:inline">New Playlist</span>
           </Button>
         </div>
 
@@ -178,15 +191,15 @@ export function PlaylistPage() {
                   data-ocid={`playlist.item.${i + 1}`}
                 >
                   {/* Playlist header row */}
-                  <div className="flex items-center gap-3 p-4">
+                  <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4">
                     <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{
                         background:
                           "linear-gradient(135deg, oklch(0.72 0.2 295 / 0.3), oklch(0.65 0.22 350 / 0.3))",
                       }}
                     >
-                      <ListMusic className="h-5 w-5 text-primary" />
+                      <ListMusic className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-foreground truncate">
@@ -197,20 +210,21 @@ export function PlaylistPage() {
                         {pl.tracks.length !== 1 ? "s" : ""}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="gap-1.5 text-primary hover:bg-primary/10"
+                        className="gap-1 sm:gap-1.5 text-primary hover:bg-primary/10 px-2 sm:px-3"
                         onClick={() => handlePlayAll(pl)}
                         data-ocid={`playlist.primary_button.${i + 1}`}
                       >
-                        <Play className="h-3.5 w-3.5" /> Play All
+                        <Play className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="hidden sm:inline">Play All</span>
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
                         onClick={() => handleDelete(pl.id)}
                         disabled={deletingId === pl.id}
                         data-ocid={`playlist.delete_button.${i + 1}`}
@@ -224,7 +238,7 @@ export function PlaylistPage() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8 text-muted-foreground"
+                        className="h-8 w-8 text-muted-foreground flex-shrink-0"
                         onClick={() => toggleExpand(pl.id)}
                         data-ocid={`playlist.toggle.${i + 1}`}
                       >
@@ -249,13 +263,14 @@ export function PlaylistPage() {
                           {pl.tracks.map((t, ti) => (
                             <div
                               key={`${t.youtubeId}-${ti}`}
-                              className="flex items-center gap-3 px-4 py-3 hover:bg-primary/5 transition-colors"
+                              className="flex items-center gap-2 px-3 sm:px-4 py-3 hover:bg-primary/5 transition-colors"
                               data-ocid={`playlist.row.${ti + 1}`}
                             >
+                              {/* Thumbnail: hidden on mobile, visible sm+ */}
                               <img
                                 src={`https://img.youtube.com/vi/${t.youtubeId}/mqdefault.jpg`}
                                 alt={t.songTitle}
-                                className="w-12 h-9 rounded-lg object-cover flex-shrink-0"
+                                className="hidden sm:block w-10 h-8 sm:w-12 sm:h-9 rounded-lg object-cover flex-shrink-0"
                               />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-foreground truncate">
@@ -268,15 +283,25 @@ export function PlaylistPage() {
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-7 w-7 text-muted-foreground/60 hover:text-destructive flex-shrink-0"
+                                className="h-9 w-9 min-w-[2.25rem] text-primary/70 hover:text-primary hover:bg-primary/10 flex-shrink-0"
+                                onClick={() => handlePlayFromTrack(pl, ti)}
+                                title="Play from here"
+                                data-ocid={`playlist.primary_button.${ti + 1}`}
+                              >
+                                <Play className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-9 w-9 min-w-[2.25rem] text-muted-foreground/60 hover:text-destructive flex-shrink-0"
                                 onClick={() => handleRemoveTrack(pl.id, ti)}
                                 disabled={removingKey === `${pl.id}-${ti}`}
                                 data-ocid={`playlist.delete_button.${ti + 1}`}
                               >
                                 {removingKey === `${pl.id}-${ti}` ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
-                                  <X className="h-3 w-3" />
+                                  <X className="h-4 w-4" />
                                 )}
                               </Button>
                             </div>

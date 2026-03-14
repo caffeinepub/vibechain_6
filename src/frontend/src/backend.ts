@@ -178,6 +178,7 @@ export interface backendInterface {
     joinCircle(name: string): Promise<void>;
     leaveCircle(name: string): Promise<void>;
     rejectFriendRequest(from: Principal): Promise<void>;
+    removeFromFriendPlaylist(playlistId: string, index: bigint): Promise<void>;
     removeFromPlaylist(playlistId: string, index: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     sendFriendRequest(to: Principal): Promise<void>;
@@ -592,6 +593,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.rejectFriendRequest(arg0);
+            return result;
+        }
+    }
+    async removeFromFriendPlaylist(arg0: string, arg1: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.removeFromFriendPlaylist(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.removeFromFriendPlaylist(arg0, arg1);
             return result;
         }
     }

@@ -101,6 +101,7 @@ export interface _SERVICE {
   'joinCircle' : ActorMethod<[string], undefined>,
   'leaveCircle' : ActorMethod<[string], undefined>,
   'rejectFriendRequest' : ActorMethod<[Principal], undefined>,
+  'removeFromFriendPlaylist' : ActorMethod<[string, bigint], undefined>,
   'removeFromPlaylist' : ActorMethod<[string, bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'sendFriendRequest' : ActorMethod<[Principal], undefined>,

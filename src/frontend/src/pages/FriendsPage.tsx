@@ -155,6 +155,19 @@ export function FriendsPage() {
     setPlaylistModalPrincipal(null);
   };
 
+  const handlePlayFromTrack = (pl: PlaylistView, fromIndex: number) => {
+    const tracks: Track[] = pl.tracks.map((t) => ({
+      youtubeId: t.youtubeId,
+      title: t.songTitle,
+      artist: t.artistName,
+      thumbnail: `https://img.youtube.com/vi/${t.youtubeId}/mqdefault.jpg`,
+    }));
+    const queue = tracks.slice(fromIndex);
+    playTrack(queue[0], queue);
+    toast.success(`Playing "${pl.tracks[fromIndex].songTitle}"`);
+    setPlaylistModalPrincipal(null);
+  };
+
   const toggleExpandPl = (id: string) => {
     setExpandedPl((prev) => {
       const next = new Set(prev);
@@ -459,7 +472,7 @@ export function FriendsPage() {
                             <img
                               src={`https://img.youtube.com/vi/${t.youtubeId}/mqdefault.jpg`}
                               alt={t.songTitle}
-                              className="w-10 h-7 rounded object-cover flex-shrink-0"
+                              className="hidden sm:block w-10 h-7 rounded object-cover flex-shrink-0"
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-foreground truncate">
@@ -469,6 +482,16 @@ export function FriendsPage() {
                                 {t.artistName}
                               </p>
                             </div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 min-w-[1.75rem] flex-shrink-0 text-primary/70 hover:text-primary hover:bg-primary/10"
+                              title="Play from here"
+                              onClick={() => handlePlayFromTrack(pl, ti)}
+                              data-ocid={`friends.primary_button.${ti + 1}`}
+                            >
+                              <Play className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
                         ))}
                       </div>

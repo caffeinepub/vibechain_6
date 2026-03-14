@@ -10,8 +10,6 @@ import Runtime "mo:core/Runtime";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
-
-
 actor {
   type Mood = {
     #happy;
@@ -602,6 +600,48 @@ actor {
       case (?playlist) {
         if (playlist.owner != caller) {
           Runtime.trap("Unauthorized: Only the owner can remove tracks");
+        };
+
+        let tracksArray = playlist.tracks.toArray();
+        if (index >= tracksArray.size()) {
+          Runtime.trap("Invalid index");
+        };
+
+        let newTracksArray = Array.tabulate(
+          tracksArray.size() - 1,
+          func(i) {
+            if (i < index) { tracksArray[i] } else { tracksArray[i + 1] };
+          },
+        );
+
+        let newTracks = List.empty<PlaylistTrack>();
+        for (track in newTracksArray.values()) {
+          newTracks.add(track);
+        };
+
+        let updatedPlaylist : Playlist = {
+          id = playlist.id;
+          name = playlist.name;
+          owner = playlist.owner;
+          tracks = newTracks;
+          createdAt = playlist.createdAt;
+        };
+        playlists.add(playlistId, updatedPlaylist);
+      };
+    };
+  };
+
+  public shared ({ caller }) func removeFromFriendPlaylist(playlistId : Text, index : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can remove from friend playlists");
+    };
+
+    switch (playlists.get(playlistId)) {
+      case (null) { Runtime.trap("Playlist not found") };
+      case (?playlist) {
+        // Allow if caller is the owner OR if caller is a friend of the owner
+        if (playlist.owner != caller and not isFriendsWithInternal(caller, playlist.owner)) {
+          Runtime.trap("Unauthorized: Must be the owner or a friend to remove from this playlist");
         };
 
         let tracksArray = playlist.tracks.toArray();
