@@ -110,6 +110,13 @@ export interface PlaylistTrack {
     youtubeId: string;
     artistName: string;
 }
+export interface ChatMessage {
+    id: string;
+    to: Principal;
+    from: Principal;
+    text: string;
+    timestamp: bigint;
+}
 export interface UserProfile {
     bio: string;
     principal: Principal;
@@ -156,6 +163,7 @@ export interface backendInterface {
     getCallerUserRole(): Promise<UserRole>;
     getCircleMembers(name: string): Promise<Array<Principal>>;
     getCirclesByMood(mood: Mood): Promise<Array<[string, VibeCircleView]>>;
+    getConversation(friend: Principal): Promise<Array<ChatMessage>>;
     getFriendFeed(): Promise<Array<VibePost>>;
     getFriendPlaylists(friend: Principal): Promise<Array<PlaylistView>>;
     getFriends(): Promise<Array<Principal>>;
@@ -174,6 +182,7 @@ export interface backendInterface {
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     sendFriendRequest(to: Principal): Promise<void>;
     sendFriendRequestByUsername(username: string): Promise<void>;
+    sendMessage(to: Principal, text: string): Promise<void>;
     unfriend(user: Principal): Promise<void>;
     updateProfile(displayName: string, username: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
 }
@@ -374,6 +383,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getCirclesByMood(to_candid_Mood_n3(this._uploadFile, this._downloadFile, arg0));
             return from_candid_vec_n13(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getConversation(arg0: Principal): Promise<Array<ChatMessage>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getConversation(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getConversation(arg0);
+            return result;
         }
     }
     async getFriendFeed(): Promise<Array<VibePost>> {
@@ -625,6 +648,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.sendFriendRequestByUsername(arg0);
+            return result;
+        }
+    }
+    async sendMessage(arg0: Principal, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.sendMessage(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.sendMessage(arg0, arg1);
             return result;
         }
     }

@@ -1,7 +1,14 @@
 import { Button } from "@/components/ui/button";
-import { Home, ListMusic, Music, Radio, User, Users } from "lucide-react";
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useRouterState } from "@tanstack/react-router";
+import {
+  Home,
+  ListMusic,
+  MessageCircle,
+  Music,
+  Radio,
+  User,
+  Users,
+} from "lucide-react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 const navItems = [
@@ -9,6 +16,7 @@ const navItems = [
   { path: "/feed", icon: Radio, label: "Feed", ocid: "nav.feed_link" },
   { path: "/circles", icon: Music, label: "Circles", ocid: "nav.circles_link" },
   { path: "/friends", icon: Users, label: "Friends", ocid: "nav.friends_link" },
+  { path: "/chat", icon: MessageCircle, label: "Chat", ocid: "nav.chat_link" },
   {
     path: "/playlist",
     icon: ListMusic,
@@ -16,10 +24,11 @@ const navItems = [
     ocid: "nav.playlist_link",
   },
   { path: "/profile", icon: User, label: "Profile", ocid: "nav.profile_link" },
-];
+] as const;
 
 export function NavBar() {
-  const location = useLocation();
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
   const { clear } = useInternetIdentity();
 
   return (
@@ -38,7 +47,7 @@ export function NavBar() {
           </Link>
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map(({ path, icon: Icon, label, ocid }) => {
-              const active = location.pathname === path;
+              const active = pathname === path;
               return (
                 <Link key={path} to={path} data-ocid={ocid}>
                   <Button
@@ -72,7 +81,7 @@ export function NavBar() {
         data-ocid="nav.mobile_bar"
       >
         {navItems.map(({ path, icon: Icon, label, ocid }) => {
-          const active = location.pathname === path;
+          const active = pathname === path;
           return (
             <Link
               key={path}

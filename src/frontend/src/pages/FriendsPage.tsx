@@ -8,10 +8,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Principal } from "@icp-sdk/core/principal";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
   ListMusic,
   Loader2,
+  MessageCircle,
   Play,
   UserMinus,
   UserPlus,
@@ -29,6 +31,7 @@ type ProfileMap = Record<string, UserProfile | null>;
 export function FriendsPage() {
   const { actor } = useActor();
   const { playTrack } = usePlayer();
+  const navigate = useNavigate();
   const [friends, setFriends] = useState<Principal[]>([]);
   const [pending, setPending] = useState<Principal[]>([]);
   const [profiles, setProfiles] = useState<ProfileMap>({});
@@ -55,7 +58,7 @@ export function FriendsPage() {
       setPending(p);
       const all = [...f, ...p];
       const results = await Promise.all(
-        all.map((pr) => actor.getUserProfile(pr).catch(() => null)),
+        all.map((pr) => actor.getProfile(pr).catch(() => null)),
       );
       const map: ProfileMap = {};
       all.forEach((pr, i) => {
@@ -317,6 +320,21 @@ export function FriendsPage() {
                         {renderIdentity(p)}
                       </div>
                       <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-primary hover:bg-primary/10 gap-1.5"
+                          onClick={() =>
+                            navigate({
+                              to: "/chat",
+                              search: { with: p.toString() },
+                            })
+                          }
+                          data-ocid={`friends.secondary_button.${i + 1}`}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Chat
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"

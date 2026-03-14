@@ -28,6 +28,13 @@ export interface PlaylistTrack {
     youtubeId: string;
     artistName: string;
 }
+export interface ChatMessage {
+    id: string;
+    to: Principal;
+    from: Principal;
+    text: string;
+    timestamp: bigint;
+}
 export interface UserProfile {
     bio: string;
     principal: Principal;
@@ -73,6 +80,7 @@ export interface backendInterface {
     getCallerUserRole(): Promise<UserRole>;
     getCircleMembers(name: string): Promise<Array<Principal>>;
     getCirclesByMood(mood: Mood): Promise<Array<[string, VibeCircleView]>>;
+    getConversation(friend: Principal): Promise<Array<ChatMessage>>;
     getFriendFeed(): Promise<Array<VibePost>>;
     getFriendPlaylists(friend: Principal): Promise<Array<PlaylistView>>;
     getFriends(): Promise<Array<Principal>>;
@@ -91,6 +99,7 @@ export interface backendInterface {
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     sendFriendRequest(to: Principal): Promise<void>;
     sendFriendRequestByUsername(username: string): Promise<void>;
+    sendMessage(to: Principal, text: string): Promise<void>;
     unfriend(user: Principal): Promise<void>;
     updateProfile(displayName: string, username: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
 }

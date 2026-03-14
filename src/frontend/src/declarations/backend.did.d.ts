@@ -10,6 +10,13 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface ChatMessage {
+  'id' : string,
+  'to' : Principal,
+  'from' : Principal,
+  'text' : string,
+  'timestamp' : bigint,
+}
 export type Mood = { 'sad' : null } |
   { 'melancholic' : null } |
   { 'happy' : null } |
@@ -61,6 +68,7 @@ export interface VibePost {
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'acceptFriendRequest' : ActorMethod<[Principal], undefined>,
+  'addToFriendPlaylist' : ActorMethod<[string, PlaylistTrack], undefined>,
   'addToPlaylist' : ActorMethod<[string, PlaylistTrack], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'createCircle' : ActorMethod<[string, Mood], undefined>,
@@ -78,6 +86,7 @@ export interface _SERVICE {
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCircleMembers' : ActorMethod<[string], Array<Principal>>,
   'getCirclesByMood' : ActorMethod<[Mood], Array<[string, VibeCircleView]>>,
+  'getConversation' : ActorMethod<[Principal], Array<ChatMessage>>,
   'getFriendFeed' : ActorMethod<[], Array<VibePost>>,
   'getFriendPlaylists' : ActorMethod<[Principal], Array<PlaylistView>>,
   'getFriends' : ActorMethod<[], Array<Principal>>,
@@ -96,6 +105,7 @@ export interface _SERVICE {
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'sendFriendRequest' : ActorMethod<[Principal], undefined>,
   'sendFriendRequestByUsername' : ActorMethod<[string], undefined>,
+  'sendMessage' : ActorMethod<[Principal, string], undefined>,
   'unfriend' : ActorMethod<[Principal], undefined>,
   'updateProfile' : ActorMethod<
     [string, string, string, Mood, string],

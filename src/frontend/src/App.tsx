@@ -1,11 +1,19 @@
 import { Toaster } from "@/components/ui/sonner";
+import {
+  Navigate,
+  Outlet,
+  RouterProvider,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { MiniPlayer } from "./components/MiniPlayer";
 import { NavBar } from "./components/NavBar";
 import { AppProvider, useApp } from "./contexts/AppContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
+import { ChatPage } from "./pages/ChatPage";
 import { CirclesPage } from "./pages/CirclesPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { FeedPage } from "./pages/FeedPage";
@@ -38,21 +46,13 @@ function AuthenticatedApp() {
   return (
     <>
       <NavBar />
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/feed" element={<FeedPage />} />
-        <Route path="/circles" element={<CirclesPage />} />
-        <Route path="/friends" element={<FriendsPage />} />
-        <Route path="/playlist" element={<PlaylistPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Outlet />
       <MiniPlayer />
     </>
   );
 }
 
-function AppRouter() {
+function AppRoot() {
   const { identity, isInitializing } = useInternetIdentity();
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
@@ -75,13 +75,84 @@ function AppRouter() {
   );
 }
 
+// Route definitions
+const rootRoute = createRootRoute({ component: AppRoot });
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
+  component: DashboardPage,
+});
+
+const feedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/feed",
+  component: FeedPage,
+});
+
+const circlesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/circles",
+  component: CirclesPage,
+});
+
+const friendsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/friends",
+  component: FriendsPage,
+});
+
+const playlistRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/playlist",
+  component: PlaylistPage,
+});
+
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/profile",
+  component: ProfilePage,
+});
+
+const chatRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/chat",
+  component: ChatPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    with: typeof search.with === "string" ? search.with : undefined,
+  }),
+});
+
+const catchAllRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "*",
+  component: () => <Navigate to="/" />,
+});
+
+const routeTree = rootRoute.addChildren([
+  dashboardRoute,
+  feedRoute,
+  circlesRoute,
+  friendsRoute,
+  playlistRoute,
+  profileRoute,
+  chatRoute,
+  catchAllRoute,
+]);
+
+const router = createRouter({ routeTree });
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <PlayerProvider>
-        <AppRouter />
-        <Toaster position="top-right" richColors />
-      </PlayerProvider>
-    </BrowserRouter>
+    <PlayerProvider>
+      <RouterProvider router={router} />
+      <Toaster position="top-right" richColors />
+    </PlayerProvider>
   );
 }

@@ -2,10 +2,10 @@ import Map "mo:core/Map";
 import Text "mo:core/Text";
 import Array "mo:core/Array";
 import Set "mo:core/Set";
+import Iter "mo:core/Iter";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import List "mo:core/List";
-
 import Runtime "mo:core/Runtime";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
@@ -88,18 +88,27 @@ actor {
     createdAt : Int;
   };
 
-  let profiles = Map.empty<Principal, UserProfile>();
-  let usernames = Map.empty<Text, Principal>();
-  let posts = Map.empty<Principal, List.List<VibePost>>();
-  var globalPosts = List.empty<VibePost>();
-  let friendRequests = Map.empty<Principal, Set.Set<Principal>>();
-  let friends = Map.empty<Principal, Set.Set<Principal>>();
-  let circles = Map.empty<Text, VibeCircle>();
+  type ChatMessage = {
+    id : Text;
+    from : Principal;
+    to : Principal;
+    text : Text;
+    timestamp : Int;
+  };
 
-  let playlists = Map.empty<Text, Playlist>();
-  let userPlaylistIds = Map.empty<Principal, List.List<Text>>();
+  let profiles : Map.Map<Principal, UserProfile> = Map.empty();
+  let usernames : Map.Map<Text, Principal> = Map.empty();
+  let posts : Map.Map<Principal, List.List<VibePost>> = Map.empty();
+  var globalPosts : List.List<VibePost> = List.empty();
+  let friendRequests : Map.Map<Principal, Set.Set<Principal>> = Map.empty();
+  let friends : Map.Map<Principal, Set.Set<Principal>> = Map.empty();
+  let circles : Map.Map<Text, VibeCircle> = Map.empty();
+  let playlists : Map.Map<Text, Playlist> = Map.empty();
+  let userPlaylistIds : Map.Map<Principal, List.List<Text>> = Map.empty();
 
-  // Initialize the access control system
+  // New messages storage - conversation key to messages
+  let messages : Map.Map<Text, List.List<ChatMessage>> = Map.empty();
+
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
@@ -110,7 +119,26 @@ actor {
     };
   };
 
-  // Required frontend functions
+  func getPendingRequestsInternal(user : Principal) : Set.Set<Principal> {
+    switch (friendRequests.get(user)) {
+      case (null) { Set.empty<Principal>() };
+      case (?requests) { requests };
+    };
+  };
+
+  func getFriendsInternal(user : Principal) : Set.Set<Principal> {
+    switch (friends.get(user)) {
+      case (null) { Set.empty<Principal>() };
+      case (?userFriends) { userFriends };
+    };
+  };
+
+  func isFriendsWithInternal(user1 : Principal, user2 : Principal) : Bool {
+    let user1Friends = getFriendsInternal(user1);
+    user1Friends.contains(user2);
+  };
+
+  // ====== PROFILE FUNCTIONS ======
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can access profiles");
@@ -200,17 +228,15 @@ actor {
   };
 
   public query ({ caller }) func getProfile(user : Principal) : async UserProfile {
-    // Public access - anyone including guests can view profiles
     switch (profiles.get(user)) {
       case (null) { Runtime.trap("User not found") };
       case (?profile) { profile };
     };
   };
 
-  public shared ({ caller }) func sendFriendRequest(to : Principal) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can send friend requests");
-    };
+  // ====== FRIENDS FUNCTIONS ======
+
+  func sendFriendRequestInternal(caller : Principal, to : Principal) {
     if (caller == to) { Runtime.trap("Cannot send friend request to yourself") };
     if (isFriendsWithInternal(caller, to)) { Runtime.trap("Already friends") };
 
@@ -225,33 +251,21 @@ actor {
     friendRequests.add(to, newRequests);
   };
 
+  public shared ({ caller }) func sendFriendRequest(to : Principal) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can send friend requests");
+    };
+    sendFriendRequestInternal(caller, to);
+  };
+
   public shared ({ caller }) func sendFriendRequestByUsername(username : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can send friend requests");
     };
     switch (usernames.get(username)) {
       case (null) { Runtime.trap("Username not found") };
-      case (?to) { await sendFriendRequest(to) };
+      case (?to) { sendFriendRequestInternal(caller, to) };
     };
-  };
-
-  func getPendingRequestsInternal(user : Principal) : Set.Set<Principal> {
-    switch (friendRequests.get(user)) {
-      case (null) { Set.empty<Principal>() };
-      case (?requests) { requests };
-    };
-  };
-
-  func getFriendsInternal(user : Principal) : Set.Set<Principal> {
-    switch (friends.get(user)) {
-      case (null) { Set.empty<Principal>() };
-      case (?userFriends) { userFriends };
-    };
-  };
-
-  func isFriendsWithInternal(user1 : Principal, user2 : Principal) : Bool {
-    let user1Friends = getFriendsInternal(user1);
-    user1Friends.contains(user2);
   };
 
   public shared ({ caller }) func acceptFriendRequest(from : Principal) : async () {
@@ -319,6 +333,7 @@ actor {
     friends.add(user, userNewFriends);
   };
 
+  // ====== VIBE POSTS FUNCTIONS ======
   public shared ({ caller }) func createVibePost(mood : Mood, youtubeId : Text, songTitle : Text, artistName : Text, message : ?Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can create vibe posts");
@@ -349,6 +364,7 @@ actor {
     globalPosts := newGlobalPosts;
   };
 
+  // ====== CIRCLES FUNCTIONS ======
   public shared ({ caller }) func createCircle(name : Text, themeMood : Mood) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can create circles");
@@ -414,7 +430,6 @@ actor {
   };
 
   public query ({ caller }) func getCircleMembers(name : Text) : async [Principal] {
-    // Public access - anyone including guests can view circle members
     switch (circles.get(name)) {
       case (null) { Runtime.trap("Circle not found") };
       case (?circle) {
@@ -424,7 +439,6 @@ actor {
   };
 
   public query ({ caller }) func getPostsByMood(mood : Mood) : async [VibePost] {
-    // Public access - anyone including guests can view posts by mood
     let filteredPosts = List.empty<VibePost>();
     for (post in globalPosts.values()) {
       if (post.mood == mood) { filteredPosts.add(post) };
@@ -449,7 +463,6 @@ actor {
   };
 
   public query ({ caller }) func getGlobalFeed() : async [VibePost] {
-    // Public access - anyone including guests can view global feed
     globalPosts.toArray();
   };
 
@@ -468,7 +481,6 @@ actor {
   };
 
   public query ({ caller }) func getCirclesByMood(mood : Mood) : async [(Text, VibeCircleView)] {
-    // Public access - anyone including guests can view circles by mood
     let result = List.empty<(Text, VibeCircleView)>();
     for ((name, circle) in circles.entries()) {
       if (circle.themeMood == mood) {
@@ -484,6 +496,7 @@ actor {
     result.toArray();
   };
 
+  // ====== PLAYLIST FUNCTIONS ======
   public shared ({ caller }) func createPlaylist(name : Text) : async Text {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can create playlists");
@@ -549,7 +562,6 @@ actor {
     };
   };
 
-  // Allow a friend to add a track to another user's playlist
   public shared ({ caller }) func addToFriendPlaylist(playlistId : Text, track : PlaylistTrack) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can add to playlists");
@@ -558,9 +570,7 @@ actor {
     switch (playlists.get(playlistId)) {
       case (null) { Runtime.trap("Playlist not found") };
       case (?playlist) {
-        if (playlist.owner == caller) {
-          // Owner adding to own playlist is fine
-        } else if (not isFriendsWithInternal(caller, playlist.owner)) {
+        if (playlist.owner == caller) {} else if (not isFriendsWithInternal(caller, playlist.owner)) {
           Runtime.trap("Unauthorized: Must be friends to add to this playlist");
         };
 
@@ -710,5 +720,83 @@ actor {
       };
     };
     friendPlaylists.toArray();
+  };
+
+  // ====== CHAT MESSAGE FUNCTIONS ======
+
+  // Utility to generate conversation key (sorted principal texts joined by "|")
+  func getConversationKey(p1 : Principal, p2 : Principal) : Text {
+    let p1Text = p1.toText();
+    let p2Text = p2.toText();
+    if (p1Text < p2Text) { p1Text # "|" # p2Text } else {
+      p2Text # "|" # p1Text;
+    };
+  };
+
+  public shared ({ caller }) func sendMessage(to : Principal, text : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can send messages");
+    };
+
+    // Can't message yourself
+    if (caller == to) { Runtime.trap("Cannot message yourself") };
+
+    // Must be friends to send message
+    let userFriends = getFriendsInternal(caller);
+    if (not userFriends.contains(to)) {
+      Runtime.trap("Not friends with the recipient");
+    };
+
+    let timestamp = Time.now();
+    let messageId = (timestamp).toText() # "_" # caller.toText();
+
+    let message : ChatMessage = {
+      id = messageId;
+      from = caller;
+      to;
+      text;
+      timestamp;
+    };
+
+    let convKey = getConversationKey(caller, to);
+
+    let currentMessages = switch (messages.get(convKey)) {
+      case (null) { List.empty<ChatMessage>() };
+      case (?existing) { existing };
+    };
+    let newMessages = List.empty<ChatMessage>();
+    newMessages.add(message);
+    for (msg in currentMessages.values()) {
+      newMessages.add(msg);
+    };
+    messages.add(convKey, newMessages);
+  };
+
+  // Get full conversation with a friend (sorted oldest first)
+  public shared ({ caller }) func getConversation(friend : Principal) : async [ChatMessage] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view conversations");
+    };
+
+    // Can't get conversation with yourself
+    if (caller == friend) { Runtime.trap("Cannot get conversation with yourself") };
+
+    // Must be friends to view conversation
+    if (not isFriendsWithInternal(caller, friend)) {
+      Runtime.trap("Not friends with conversation partner");
+    };
+
+    let convKey = getConversationKey(caller, friend);
+
+    switch (messages.get(convKey)) {
+      case (null) { [] };
+      case (?chatList) {
+        let reversed = List.empty<ChatMessage>();
+        for (msg in chatList.values()) {
+          reversed.add(msg);
+        };
+        reversed.toArray();
+      };
+    };
   };
 };
