@@ -144,6 +144,7 @@ export enum UserRole {
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     acceptFriendRequest(from: Principal): Promise<void>;
+    addToFriendPlaylist(playlistId: string, track: PlaylistTrack): Promise<void>;
     addToPlaylist(playlistId: string, track: PlaylistTrack): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createCircle(name: string, themeMood: Mood): Promise<void>;
@@ -204,6 +205,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.acceptFriendRequest(arg0);
+            return result;
+        }
+    }
+    async addToFriendPlaylist(arg0: string, arg1: PlaylistTrack): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addToFriendPlaylist(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addToFriendPlaylist(arg0, arg1);
             return result;
         }
     }

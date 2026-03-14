@@ -9,9 +9,9 @@ import List "mo:core/List";
 import Runtime "mo:core/Runtime";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
-import Migration "migration";
 
-(with migration = Migration.run)
+
+
 actor {
   type Mood = {
     #happy;
@@ -529,6 +529,39 @@ actor {
       case (?playlist) {
         if (playlist.owner != caller) {
           Runtime.trap("Unauthorized: Only the owner can add tracks");
+        };
+
+        let updatedTracks = List.empty<PlaylistTrack>();
+        for (existingTrack in playlist.tracks.values()) {
+          updatedTracks.add(existingTrack);
+        };
+        updatedTracks.add(track);
+
+        let updatedPlaylist : Playlist = {
+          id = playlist.id;
+          name = playlist.name;
+          owner = playlist.owner;
+          tracks = updatedTracks;
+          createdAt = playlist.createdAt;
+        };
+        playlists.add(playlistId, updatedPlaylist);
+      };
+    };
+  };
+
+  // Allow a friend to add a track to another user's playlist
+  public shared ({ caller }) func addToFriendPlaylist(playlistId : Text, track : PlaylistTrack) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can add to playlists");
+    };
+
+    switch (playlists.get(playlistId)) {
+      case (null) { Runtime.trap("Playlist not found") };
+      case (?playlist) {
+        if (playlist.owner == caller) {
+          // Owner adding to own playlist is fine
+        } else if (not isFriendsWithInternal(caller, playlist.owner)) {
+          Runtime.trap("Unauthorized: Must be friends to add to this playlist");
         };
 
         let updatedTracks = List.empty<PlaylistTrack>();

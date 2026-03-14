@@ -61,6 +61,7 @@ export enum UserRole {
 }
 export interface backendInterface {
     acceptFriendRequest(from: Principal): Promise<void>;
+    addToFriendPlaylist(playlistId: string, track: PlaylistTrack): Promise<void>;
     addToPlaylist(playlistId: string, track: PlaylistTrack): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createCircle(name: string, themeMood: Mood): Promise<void>;

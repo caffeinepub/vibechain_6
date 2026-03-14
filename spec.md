@@ -1,32 +1,22 @@
 # VIBECHAIN
 
 ## Current State
-VIBECHAIN has user profiles, vibe feed, vibe circles, friend management (add by @username, accept/reject). There is no playlist feature -- users cannot save songs to a playlist, and there is no way to view or play a friend's playlist.
+Playlists exist: users can create, manage, and play their own playlists. Friends can view and play each other's playlists via the Friends page. The `AddToPlaylistModal` (triggered by the "+" on any song card) only lists the caller's own playlists. The backend `addToPlaylist` rejects any caller who is not the playlist owner.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `Playlist` type: a named list of tracks (youtubeId, songTitle, artistName) owned by a user
-- Backend: `createPlaylist`, `addToPlaylist`, `removeFromPlaylist`, `getMyPlaylists`, `getFriendPlaylists` (only callable if the two users are friends), `deletePlaylist`
-- Frontend: Playlist page (tab in nav) -- user can see their own playlists, create new playlists, add songs to them
-- On any song card / search result, an "Add to Playlist" button that opens a modal to pick which playlist (or create one)
-- Friends page: each friend row shows a "View Playlist" button that opens that friend's playlists and allows playing them
-- Playing a playlist loads all its tracks into the mini player queue
+- Backend function `addToFriendPlaylist(playlistId, track)` that allows a friend (caller) to add a track to a playlist owned by another user, gated on friendship check.
+- `AddToPlaylistModal`: second section "Friends' Playlists" that loads playlists for all friends and lets the user add the song to any of them.
 
 ### Modify
-- `FriendsPage`: add "View Playlist" button per friend row
-- `App.tsx` / nav: add Playlist tab
-- `SongCard`: add "Add to Playlist" action
+- `AddToPlaylistModal`: load friend list and their playlists; display in a collapsible "Friends' Playlists" section below the existing "My Playlists" section.
+- FriendsPage playlist modal: retain existing Play/Expand behavior; optionally surface per-track play button (no change required).
 
 ### Remove
-- Nothing removed
+- Nothing removed.
 
 ## Implementation Plan
-1. Add `PlaylistTrack`, `Playlist` types to Motoko backend
-2. Add backend functions: createPlaylist, addToPlaylist, removeFromPlaylist, deletePlaylist, getMyPlaylists, getFriendPlaylists
-3. Regenerate backend.d.ts
-4. Create `PlaylistPage.tsx` -- lists user's playlists, allows creating new ones, shows tracks, play-all button
-5. Create `FriendPlaylistModal.tsx` -- shows a friend's playlists and play buttons
-6. Update `FriendsPage.tsx` -- add "Playlist" button per friend that opens the modal
-7. Update `SongCard.tsx` or `DashboardPage.tsx` -- add "Add to Playlist" flow
-8. Update `App.tsx` nav to include Playlist tab
+1. Add `addToFriendPlaylist(playlistId: Text, track: PlaylistTrack)` to `main.mo` — checks caller is a user, looks up playlist owner, verifies friendship, then appends track.
+2. Regenerate `backend.d.ts` (via generate step).
+3. Update `AddToPlaylistModal.tsx` to fetch friend list + their playlists and display a "Friends' Playlists" section with add buttons.
