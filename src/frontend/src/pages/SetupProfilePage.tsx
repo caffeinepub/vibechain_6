@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Check, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Mood } from "../backend.d";
+import type { Mood } from "../backend.d";
 import { useApp } from "../contexts/AppContext";
 import { useActor } from "../hooks/useActor";
 import { MOOD_CONFIG } from "../lib/youtube";
@@ -21,7 +21,7 @@ export function SetupProfilePage() {
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [selectedMood, setSelectedMood] = useState<Mood>(Mood.chill);
+  const [selectedMood, setSelectedMood] = useState<Mood>("chill" as Mood);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
