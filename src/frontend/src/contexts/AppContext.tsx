@@ -15,10 +15,16 @@ interface AppContextType {
   isLoadingProfile: boolean;
   selectedMood: Mood | null;
   setSelectedMood: (mood: Mood | null) => void;
-  refreshProfile: () => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
+
+function unwrapOptional<T>(val: T | null | T[]): T | null {
+  if (val === null || val === undefined) return null;
+  if (Array.isArray(val)) return (val[0] as T) ?? null;
+  return val;
+}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { actor } = useActor();
@@ -33,8 +39,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (principal.isAnonymous()) return;
     setIsLoadingProfile(true);
     try {
-      const p = await actor.getCallerUserProfile();
-      setProfile(p);
+      const raw = await actor.getCallerUserProfile();
+      setProfile(unwrapOptional(raw as UserProfile | null | UserProfile[]));
     } catch {
       setProfile(null);
     } finally {

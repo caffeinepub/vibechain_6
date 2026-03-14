@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Home, Music, Radio, User, Users } from "lucide-react";
+import { Home, ListMusic, Music, Radio, User, Users } from "lucide-react";
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -9,6 +9,12 @@ const navItems = [
   { path: "/feed", icon: Radio, label: "Feed", ocid: "nav.feed_link" },
   { path: "/circles", icon: Music, label: "Circles", ocid: "nav.circles_link" },
   { path: "/friends", icon: Users, label: "Friends", ocid: "nav.friends_link" },
+  {
+    path: "/playlist",
+    icon: ListMusic,
+    label: "Playlists",
+    ocid: "nav.playlist_link",
+  },
   { path: "/profile", icon: User, label: "Profile", ocid: "nav.profile_link" },
 ];
 
@@ -38,7 +44,9 @@ export function NavBar() {
                   <Button
                     variant={active ? "secondary" : "ghost"}
                     size="sm"
-                    className={`gap-2 ${active ? "text-primary" : "text-muted-foreground"}`}
+                    className={`gap-2 ${
+                      active ? "text-primary" : "text-muted-foreground"
+                    }`}
                   >
                     <Icon className="h-4 w-4" />
                     {label}
@@ -70,13 +78,17 @@ export function NavBar() {
               key={path}
               to={path}
               data-ocid={ocid}
-              className="flex flex-col items-center gap-1 px-3 py-1"
+              className="flex flex-col items-center gap-1 px-2 py-1"
             >
               <Icon
-                className={`h-5 w-5 ${active ? "text-primary" : "text-muted-foreground"}`}
+                className={`h-5 w-5 ${
+                  active ? "text-primary" : "text-muted-foreground"
+                }`}
               />
               <span
-                className={`text-[10px] ${active ? "text-primary" : "text-muted-foreground"}`}
+                className={`text-[9px] ${
+                  active ? "text-primary" : "text-muted-foreground"
+                }`}
               >
                 {label}
               </span>

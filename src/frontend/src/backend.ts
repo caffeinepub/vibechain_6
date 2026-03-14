@@ -89,9 +89,31 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface VibePost {
+    songTitle: string;
+    mood: Mood;
+    author: Principal;
+    youtubeId: string;
+    message?: string;
+    timestamp: bigint;
+    artistName: string;
+}
+export interface PlaylistView {
+    id: string;
+    owner: Principal;
+    tracks: Array<PlaylistTrack>;
+    name: string;
+    createdAt: bigint;
+}
+export interface PlaylistTrack {
+    songTitle: string;
+    youtubeId: string;
+    artistName: string;
+}
 export interface UserProfile {
     bio: string;
     principal: Principal;
+    username: string;
     displayName: string;
     currentMood: Mood;
     joined: bigint;
@@ -103,15 +125,6 @@ export interface VibeCircleView {
     name: string;
     createdAt: bigint;
     createdBy: Principal;
-}
-export interface VibePost {
-    songTitle: string;
-    mood: Mood;
-    author: Principal;
-    youtubeId: string;
-    message?: string;
-    timestamp: bigint;
-    artistName: string;
 }
 export enum Mood {
     sad = "sad",
@@ -131,29 +144,37 @@ export enum UserRole {
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     acceptFriendRequest(from: Principal): Promise<void>;
+    addToPlaylist(playlistId: string, track: PlaylistTrack): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createCircle(name: string, themeMood: Mood): Promise<void>;
-    createProfile(displayName: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
+    createPlaylist(name: string): Promise<string>;
+    createProfile(displayName: string, username: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
     createVibePost(mood: Mood, youtubeId: string, songTitle: string, artistName: string, message: string | null): Promise<void>;
+    deletePlaylist(playlistId: string): Promise<void>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCircleMembers(name: string): Promise<Array<Principal>>;
     getCirclesByMood(mood: Mood): Promise<Array<[string, VibeCircleView]>>;
     getFriendFeed(): Promise<Array<VibePost>>;
+    getFriendPlaylists(friend: Principal): Promise<Array<PlaylistView>>;
     getFriends(): Promise<Array<Principal>>;
     getGlobalFeed(): Promise<Array<VibePost>>;
+    getMyPlaylists(): Promise<Array<PlaylistView>>;
     getPendingFriendRequests(): Promise<Array<Principal>>;
     getPostsByMood(mood: Mood): Promise<Array<VibePost>>;
     getProfile(user: Principal): Promise<UserProfile>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    isUsernameTaken(username: string): Promise<boolean>;
     joinCircle(name: string): Promise<void>;
     leaveCircle(name: string): Promise<void>;
     rejectFriendRequest(from: Principal): Promise<void>;
+    removeFromPlaylist(playlistId: string, index: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     sendFriendRequest(to: Principal): Promise<void>;
+    sendFriendRequestByUsername(username: string): Promise<void>;
     unfriend(user: Principal): Promise<void>;
-    updateProfile(displayName: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
+    updateProfile(displayName: string, username: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
 }
 import type { Mood as _Mood, UserProfile as _UserProfile, UserRole as _UserRole, VibeCircleView as _VibeCircleView, VibePost as _VibePost } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -186,6 +207,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async addToPlaylist(arg0: string, arg1: PlaylistTrack): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addToPlaylist(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addToPlaylist(arg0, arg1);
+            return result;
+        }
+    }
     async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
         if (this.processError) {
             try {
@@ -214,17 +249,31 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async createProfile(arg0: string, arg1: string, arg2: Mood, arg3: string): Promise<void> {
+    async createPlaylist(arg0: string): Promise<string> {
         if (this.processError) {
             try {
-                const result = await this.actor.createProfile(arg0, arg1, to_candid_Mood_n3(this._uploadFile, this._downloadFile, arg2), arg3);
+                const result = await this.actor.createPlaylist(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createProfile(arg0, arg1, to_candid_Mood_n3(this._uploadFile, this._downloadFile, arg2), arg3);
+            const result = await this.actor.createPlaylist(arg0);
+            return result;
+        }
+    }
+    async createProfile(arg0: string, arg1: string, arg2: string, arg3: Mood, arg4: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createProfile(arg0, arg1, arg2, to_candid_Mood_n3(this._uploadFile, this._downloadFile, arg3), arg4);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createProfile(arg0, arg1, arg2, to_candid_Mood_n3(this._uploadFile, this._downloadFile, arg3), arg4);
             return result;
         }
     }
@@ -239,6 +288,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.createVibePost(to_candid_Mood_n3(this._uploadFile, this._downloadFile, arg0), arg1, arg2, arg3, to_candid_opt_n5(this._uploadFile, this._downloadFile, arg4));
+            return result;
+        }
+    }
+    async deletePlaylist(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deletePlaylist(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deletePlaylist(arg0);
             return result;
         }
     }
@@ -312,6 +375,20 @@ export class Backend implements backendInterface {
             return from_candid_vec_n17(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getFriendPlaylists(arg0: Principal): Promise<Array<PlaylistView>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getFriendPlaylists(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getFriendPlaylists(arg0);
+            return result;
+        }
+    }
     async getFriends(): Promise<Array<Principal>> {
         if (this.processError) {
             try {
@@ -338,6 +415,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getGlobalFeed();
             return from_candid_vec_n17(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getMyPlaylists(): Promise<Array<PlaylistView>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMyPlaylists();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMyPlaylists();
+            return result;
         }
     }
     async getPendingFriendRequests(): Promise<Array<Principal>> {
@@ -410,6 +501,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async isUsernameTaken(arg0: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.isUsernameTaken(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.isUsernameTaken(arg0);
+            return result;
+        }
+    }
     async joinCircle(arg0: string): Promise<void> {
         if (this.processError) {
             try {
@@ -452,6 +557,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async removeFromPlaylist(arg0: string, arg1: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.removeFromPlaylist(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.removeFromPlaylist(arg0, arg1);
+            return result;
+        }
+    }
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
         if (this.processError) {
             try {
@@ -480,6 +599,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async sendFriendRequestByUsername(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.sendFriendRequestByUsername(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.sendFriendRequestByUsername(arg0);
+            return result;
+        }
+    }
     async unfriend(arg0: Principal): Promise<void> {
         if (this.processError) {
             try {
@@ -494,17 +627,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async updateProfile(arg0: string, arg1: string, arg2: Mood, arg3: string): Promise<void> {
+    async updateProfile(arg0: string, arg1: string, arg2: string, arg3: Mood, arg4: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateProfile(arg0, arg1, to_candid_Mood_n3(this._uploadFile, this._downloadFile, arg2), arg3);
+                const result = await this.actor.updateProfile(arg0, arg1, arg2, to_candid_Mood_n3(this._uploadFile, this._downloadFile, arg3), arg4);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateProfile(arg0, arg1, to_candid_Mood_n3(this._uploadFile, this._downloadFile, arg2), arg3);
+            const result = await this.actor.updateProfile(arg0, arg1, arg2, to_candid_Mood_n3(this._uploadFile, this._downloadFile, arg3), arg4);
             return result;
         }
     }
@@ -581,6 +714,7 @@ function from_candid_record_n19(_uploadFile: (file: ExternalBlob) => Promise<Uin
 function from_candid_record_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     bio: string;
     principal: Principal;
+    username: string;
     displayName: string;
     currentMood: _Mood;
     joined: bigint;
@@ -588,6 +722,7 @@ function from_candid_record_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint
 }): {
     bio: string;
     principal: Principal;
+    username: string;
     displayName: string;
     currentMood: Mood;
     joined: bigint;
@@ -596,6 +731,7 @@ function from_candid_record_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint
     return {
         bio: value.bio,
         principal: value.principal,
+        username: value.username,
         displayName: value.displayName,
         currentMood: from_candid_Mood_n9(_uploadFile, _downloadFile, value.currentMood),
         joined: value.joined,
@@ -657,6 +793,7 @@ function to_candid_opt_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Arra
 function to_candid_record_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     bio: string;
     principal: Principal;
+    username: string;
     displayName: string;
     currentMood: Mood;
     joined: bigint;
@@ -664,6 +801,7 @@ function to_candid_record_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8
 }): {
     bio: string;
     principal: Principal;
+    username: string;
     displayName: string;
     currentMood: _Mood;
     joined: bigint;
@@ -672,6 +810,7 @@ function to_candid_record_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8
     return {
         bio: value.bio,
         principal: value.principal,
+        username: value.username,
         displayName: value.displayName,
         currentMood: to_candid_Mood_n3(_uploadFile, _downloadFile, value.currentMood),
         joined: value.joined,

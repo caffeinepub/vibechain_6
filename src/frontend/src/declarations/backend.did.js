@@ -8,6 +8,11 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const PlaylistTrack = IDL.Record({
+  'songTitle' : IDL.Text,
+  'youtubeId' : IDL.Text,
+  'artistName' : IDL.Text,
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -26,6 +31,7 @@ export const Mood = IDL.Variant({
 export const UserProfile = IDL.Record({
   'bio' : IDL.Text,
   'principal' : IDL.Principal,
+  'username' : IDL.Text,
   'displayName' : IDL.Text,
   'currentMood' : Mood,
   'joined' : IDL.Int,
@@ -47,18 +53,32 @@ export const VibePost = IDL.Record({
   'timestamp' : IDL.Int,
   'artistName' : IDL.Text,
 });
+export const PlaylistView = IDL.Record({
+  'id' : IDL.Text,
+  'owner' : IDL.Principal,
+  'tracks' : IDL.Vec(PlaylistTrack),
+  'name' : IDL.Text,
+  'createdAt' : IDL.Int,
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'acceptFriendRequest' : IDL.Func([IDL.Principal], [], []),
+  'addToPlaylist' : IDL.Func([IDL.Text, PlaylistTrack], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'createCircle' : IDL.Func([IDL.Text, Mood], [], []),
-  'createProfile' : IDL.Func([IDL.Text, IDL.Text, Mood, IDL.Text], [], []),
+  'createPlaylist' : IDL.Func([IDL.Text], [IDL.Text], []),
+  'createProfile' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, Mood, IDL.Text],
+      [],
+      [],
+    ),
   'createVibePost' : IDL.Func(
       [Mood, IDL.Text, IDL.Text, IDL.Text, IDL.Opt(IDL.Text)],
       [],
       [],
     ),
+  'deletePlaylist' : IDL.Func([IDL.Text], [], []),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getCircleMembers' : IDL.Func(
@@ -72,8 +92,10 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getFriendFeed' : IDL.Func([], [IDL.Vec(VibePost)], ['query']),
+  'getFriendPlaylists' : IDL.Func([IDL.Principal], [IDL.Vec(PlaylistView)], []),
   'getFriends' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
   'getGlobalFeed' : IDL.Func([], [IDL.Vec(VibePost)], ['query']),
+  'getMyPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], []),
   'getPendingFriendRequests' : IDL.Func(
       [],
       [IDL.Vec(IDL.Principal)],
@@ -87,18 +109,30 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'isUsernameTaken' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'joinCircle' : IDL.Func([IDL.Text], [], []),
   'leaveCircle' : IDL.Func([IDL.Text], [], []),
   'rejectFriendRequest' : IDL.Func([IDL.Principal], [], []),
+  'removeFromPlaylist' : IDL.Func([IDL.Text, IDL.Nat], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'sendFriendRequest' : IDL.Func([IDL.Principal], [], []),
+  'sendFriendRequestByUsername' : IDL.Func([IDL.Text], [], []),
   'unfriend' : IDL.Func([IDL.Principal], [], []),
-  'updateProfile' : IDL.Func([IDL.Text, IDL.Text, Mood, IDL.Text], [], []),
+  'updateProfile' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, Mood, IDL.Text],
+      [],
+      [],
+    ),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const PlaylistTrack = IDL.Record({
+    'songTitle' : IDL.Text,
+    'youtubeId' : IDL.Text,
+    'artistName' : IDL.Text,
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
@@ -117,6 +151,7 @@ export const idlFactory = ({ IDL }) => {
   const UserProfile = IDL.Record({
     'bio' : IDL.Text,
     'principal' : IDL.Principal,
+    'username' : IDL.Text,
     'displayName' : IDL.Text,
     'currentMood' : Mood,
     'joined' : IDL.Int,
@@ -138,18 +173,32 @@ export const idlFactory = ({ IDL }) => {
     'timestamp' : IDL.Int,
     'artistName' : IDL.Text,
   });
+  const PlaylistView = IDL.Record({
+    'id' : IDL.Text,
+    'owner' : IDL.Principal,
+    'tracks' : IDL.Vec(PlaylistTrack),
+    'name' : IDL.Text,
+    'createdAt' : IDL.Int,
+  });
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'acceptFriendRequest' : IDL.Func([IDL.Principal], [], []),
+    'addToPlaylist' : IDL.Func([IDL.Text, PlaylistTrack], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'createCircle' : IDL.Func([IDL.Text, Mood], [], []),
-    'createProfile' : IDL.Func([IDL.Text, IDL.Text, Mood, IDL.Text], [], []),
+    'createPlaylist' : IDL.Func([IDL.Text], [IDL.Text], []),
+    'createProfile' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, Mood, IDL.Text],
+        [],
+        [],
+      ),
     'createVibePost' : IDL.Func(
         [Mood, IDL.Text, IDL.Text, IDL.Text, IDL.Opt(IDL.Text)],
         [],
         [],
       ),
+    'deletePlaylist' : IDL.Func([IDL.Text], [], []),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getCircleMembers' : IDL.Func(
@@ -163,8 +212,14 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getFriendFeed' : IDL.Func([], [IDL.Vec(VibePost)], ['query']),
+    'getFriendPlaylists' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(PlaylistView)],
+        [],
+      ),
     'getFriends' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
     'getGlobalFeed' : IDL.Func([], [IDL.Vec(VibePost)], ['query']),
+    'getMyPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], []),
     'getPendingFriendRequests' : IDL.Func(
         [],
         [IDL.Vec(IDL.Principal)],
@@ -178,13 +233,20 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'isUsernameTaken' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'joinCircle' : IDL.Func([IDL.Text], [], []),
     'leaveCircle' : IDL.Func([IDL.Text], [], []),
     'rejectFriendRequest' : IDL.Func([IDL.Principal], [], []),
+    'removeFromPlaylist' : IDL.Func([IDL.Text, IDL.Nat], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'sendFriendRequest' : IDL.Func([IDL.Principal], [], []),
+    'sendFriendRequestByUsername' : IDL.Func([IDL.Text], [], []),
     'unfriend' : IDL.Func([IDL.Principal], [], []),
-    'updateProfile' : IDL.Func([IDL.Text, IDL.Text, Mood, IDL.Text], [], []),
+    'updateProfile' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, Mood, IDL.Text],
+        [],
+        [],
+      ),
   });
 };
 

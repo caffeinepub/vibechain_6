@@ -1,41 +1,32 @@
 # VIBECHAIN
 
 ## Current State
-New project. No existing code.
+VIBECHAIN has user profiles, vibe feed, vibe circles, friend management (add by @username, accept/reject). There is no playlist feature -- users cannot save songs to a playlist, and there is no way to view or play a friend's playlist.
 
 ## Requested Changes (Diff)
 
 ### Add
-- User authentication via Google OAuth and Apple ID (frontend OAuth flow + backend session)
-- Mood selector UI (Happy, Sad, Energetic, Calm, Melancholic, Romantic, Angry, Chill) that drives music discovery
-- YouTube Data API v3 integration (search songs by mood keywords)
-- Music player: plays YouTube audio/video via YouTube IFrame Player API
-  - Mini player bar with play/pause, next, previous buttons
-  - Linear progress buffer bar with click-to-seek / skip functionality
-  - Song title, artist, thumbnail display
-- Song search bar to find tracks by name/artist
-- Vibe Feed: users post their current mood + song + optional message; friends see it in real-time feed
-- Vibe Circles: group rooms based on shared moods (join/leave)
-- Friend system: add friends, share vibe/song to their feed
-- User profiles: display name, current mood, vibe history
-- Backend stores: users, vibes (mood + song posts), friendships, vibe circle memberships
+- `Playlist` type: a named list of tracks (youtubeId, songTitle, artistName) owned by a user
+- Backend: `createPlaylist`, `addToPlaylist`, `removeFromPlaylist`, `getMyPlaylists`, `getFriendPlaylists` (only callable if the two users are friends), `deletePlaylist`
+- Frontend: Playlist page (tab in nav) -- user can see their own playlists, create new playlists, add songs to them
+- On any song card / search result, an "Add to Playlist" button that opens a modal to pick which playlist (or create one)
+- Friends page: each friend row shows a "View Playlist" button that opens that friend's playlists and allows playing them
+- Playing a playlist loads all its tracks into the mini player queue
 
 ### Modify
-N/A
+- `FriendsPage`: add "View Playlist" button per friend row
+- `App.tsx` / nav: add Playlist tab
+- `SongCard`: add "Add to Playlist" action
 
 ### Remove
-N/A
+- Nothing removed
 
 ## Implementation Plan
-1. Motoko backend: user profiles, vibe posts CRUD, friend requests, vibe circles, session management
-2. Select: authorization, http-outcalls components
-3. Frontend:
-   - Auth screens (Google/Apple OAuth)
-   - Mood selector dashboard
-   - YouTube search integration (frontend calls YouTube Data API v3)
-   - YouTube IFrame player with mini player bar
-   - Progress/buffer bar with seek/skip
-   - Vibe Feed page
-   - Friends page
-   - Vibe Circles page
-   - Persistent mini player across pages
+1. Add `PlaylistTrack`, `Playlist` types to Motoko backend
+2. Add backend functions: createPlaylist, addToPlaylist, removeFromPlaylist, deletePlaylist, getMyPlaylists, getFriendPlaylists
+3. Regenerate backend.d.ts
+4. Create `PlaylistPage.tsx` -- lists user's playlists, allows creating new ones, shows tracks, play-all button
+5. Create `FriendPlaylistModal.tsx` -- shows a friend's playlists and play buttons
+6. Update `FriendsPage.tsx` -- add "Playlist" button per friend that opens the modal
+7. Update `SongCard.tsx` or `DashboardPage.tsx` -- add "Add to Playlist" flow
+8. Update `App.tsx` nav to include Playlist tab

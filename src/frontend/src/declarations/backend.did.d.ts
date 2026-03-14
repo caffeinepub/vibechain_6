@@ -18,9 +18,22 @@ export type Mood = { 'sad' : null } |
   { 'calm' : null } |
   { 'chill' : null } |
   { 'energetic' : null };
+export interface PlaylistTrack {
+  'songTitle' : string,
+  'youtubeId' : string,
+  'artistName' : string,
+}
+export interface PlaylistView {
+  'id' : string,
+  'owner' : Principal,
+  'tracks' : Array<PlaylistTrack>,
+  'name' : string,
+  'createdAt' : bigint,
+}
 export interface UserProfile {
   'bio' : string,
   'principal' : Principal,
+  'username' : string,
   'displayName' : string,
   'currentMood' : Mood,
   'joined' : bigint,
@@ -48,32 +61,46 @@ export interface VibePost {
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'acceptFriendRequest' : ActorMethod<[Principal], undefined>,
+  'addToPlaylist' : ActorMethod<[string, PlaylistTrack], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'createCircle' : ActorMethod<[string, Mood], undefined>,
-  'createProfile' : ActorMethod<[string, string, Mood, string], undefined>,
+  'createPlaylist' : ActorMethod<[string], string>,
+  'createProfile' : ActorMethod<
+    [string, string, string, Mood, string],
+    undefined
+  >,
   'createVibePost' : ActorMethod<
     [Mood, string, string, string, [] | [string]],
     undefined
   >,
+  'deletePlaylist' : ActorMethod<[string], undefined>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCircleMembers' : ActorMethod<[string], Array<Principal>>,
   'getCirclesByMood' : ActorMethod<[Mood], Array<[string, VibeCircleView]>>,
   'getFriendFeed' : ActorMethod<[], Array<VibePost>>,
+  'getFriendPlaylists' : ActorMethod<[Principal], Array<PlaylistView>>,
   'getFriends' : ActorMethod<[], Array<Principal>>,
   'getGlobalFeed' : ActorMethod<[], Array<VibePost>>,
+  'getMyPlaylists' : ActorMethod<[], Array<PlaylistView>>,
   'getPendingFriendRequests' : ActorMethod<[], Array<Principal>>,
   'getPostsByMood' : ActorMethod<[Mood], Array<VibePost>>,
   'getProfile' : ActorMethod<[Principal], UserProfile>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'isUsernameTaken' : ActorMethod<[string], boolean>,
   'joinCircle' : ActorMethod<[string], undefined>,
   'leaveCircle' : ActorMethod<[string], undefined>,
   'rejectFriendRequest' : ActorMethod<[Principal], undefined>,
+  'removeFromPlaylist' : ActorMethod<[string, bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'sendFriendRequest' : ActorMethod<[Principal], undefined>,
+  'sendFriendRequestByUsername' : ActorMethod<[string], undefined>,
   'unfriend' : ActorMethod<[Principal], undefined>,
-  'updateProfile' : ActorMethod<[string, string, Mood, string], undefined>,
+  'updateProfile' : ActorMethod<
+    [string, string, string, Mood, string],
+    undefined
+  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

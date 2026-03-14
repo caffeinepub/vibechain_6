@@ -11,6 +11,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { FeedPage } from "./pages/FeedPage";
 import { FriendsPage } from "./pages/FriendsPage";
 import { LandingPage } from "./pages/LandingPage";
+import { PlaylistPage } from "./pages/PlaylistPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SetupProfilePage } from "./pages/SetupProfilePage";
 
@@ -42,6 +43,7 @@ function AuthenticatedApp() {
         <Route path="/feed" element={<FeedPage />} />
         <Route path="/circles" element={<CirclesPage />} />
         <Route path="/friends" element={<FriendsPage />} />
+        <Route path="/playlist" element={<PlaylistPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

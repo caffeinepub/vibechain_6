@@ -7,9 +7,31 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
+export interface VibePost {
+    songTitle: string;
+    mood: Mood;
+    author: Principal;
+    youtubeId: string;
+    message?: string;
+    timestamp: bigint;
+    artistName: string;
+}
+export interface PlaylistView {
+    id: string;
+    owner: Principal;
+    tracks: Array<PlaylistTrack>;
+    name: string;
+    createdAt: bigint;
+}
+export interface PlaylistTrack {
+    songTitle: string;
+    youtubeId: string;
+    artistName: string;
+}
 export interface UserProfile {
     bio: string;
     principal: Principal;
+    username: string;
     displayName: string;
     currentMood: Mood;
     joined: bigint;
@@ -21,15 +43,6 @@ export interface VibeCircleView {
     name: string;
     createdAt: bigint;
     createdBy: Principal;
-}
-export interface VibePost {
-    songTitle: string;
-    mood: Mood;
-    author: Principal;
-    youtubeId: string;
-    message?: string;
-    timestamp: bigint;
-    artistName: string;
 }
 export enum Mood {
     sad = "sad",
@@ -48,27 +61,35 @@ export enum UserRole {
 }
 export interface backendInterface {
     acceptFriendRequest(from: Principal): Promise<void>;
+    addToPlaylist(playlistId: string, track: PlaylistTrack): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createCircle(name: string, themeMood: Mood): Promise<void>;
-    createProfile(displayName: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
+    createPlaylist(name: string): Promise<string>;
+    createProfile(displayName: string, username: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
     createVibePost(mood: Mood, youtubeId: string, songTitle: string, artistName: string, message: string | null): Promise<void>;
+    deletePlaylist(playlistId: string): Promise<void>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCircleMembers(name: string): Promise<Array<Principal>>;
     getCirclesByMood(mood: Mood): Promise<Array<[string, VibeCircleView]>>;
     getFriendFeed(): Promise<Array<VibePost>>;
+    getFriendPlaylists(friend: Principal): Promise<Array<PlaylistView>>;
     getFriends(): Promise<Array<Principal>>;
     getGlobalFeed(): Promise<Array<VibePost>>;
+    getMyPlaylists(): Promise<Array<PlaylistView>>;
     getPendingFriendRequests(): Promise<Array<Principal>>;
     getPostsByMood(mood: Mood): Promise<Array<VibePost>>;
     getProfile(user: Principal): Promise<UserProfile>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    isUsernameTaken(username: string): Promise<boolean>;
     joinCircle(name: string): Promise<void>;
     leaveCircle(name: string): Promise<void>;
     rejectFriendRequest(from: Principal): Promise<void>;
+    removeFromPlaylist(playlistId: string, index: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     sendFriendRequest(to: Principal): Promise<void>;
+    sendFriendRequestByUsername(username: string): Promise<void>;
     unfriend(user: Principal): Promise<void>;
-    updateProfile(displayName: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
+    updateProfile(displayName: string, username: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
 }

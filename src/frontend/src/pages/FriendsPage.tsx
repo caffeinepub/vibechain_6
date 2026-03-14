@@ -1,18 +1,47 @@
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Principal } from "@icp-sdk/core/principal";
-import { Check, Loader2, UserMinus, UserPlus, X } from "lucide-react";
-import React, { useState, useEffect, useCallback } from "react";
+import {
+  Check,
+  ListMusic,
+  Loader2,
+  Play,
+  UserMinus,
+  UserPlus,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import type { PlaylistView, UserProfile } from "../backend.d";
+import { usePlayer } from "../contexts/PlayerContext";
+import type { Track } from "../contexts/PlayerContext";
 import { useActor } from "../hooks/useActor";
+
+type ProfileMap = Record<string, UserProfile | null>;
 
 export function FriendsPage() {
   const { actor } = useActor();
+  const { playTrack } = usePlayer();
   const [friends, setFriends] = useState<Principal[]>([]);
   const [pending, setPending] = useState<Principal[]>([]);
+  const [profiles, setProfiles] = useState<ProfileMap>({});
   const [addInput, setAddInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+
+  // Friend playlists modal state
+  const [playlistModalPrincipal, setPlaylistModalPrincipal] =
+    useState<Principal | null>(null);
+  const [friendPlaylists, setFriendPlaylists] = useState<PlaylistView[]>([]);
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  const [expandedPl, setExpandedPl] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!actor) return;
@@ -24,6 +53,15 @@ export function FriendsPage() {
       ]);
       setFriends(f);
       setPending(p);
+      const all = [...f, ...p];
+      const results = await Promise.all(
+        all.map((pr) => actor.getUserProfile(pr).catch(() => null)),
+      );
+      const map: ProfileMap = {};
+      all.forEach((pr, i) => {
+        map[pr.toString()] = results[i] ?? null;
+      });
+      setProfiles(map);
     } catch {
       toast.error("Failed to load friends");
     } finally {
@@ -39,13 +77,12 @@ export function FriendsPage() {
     if (!actor || !addInput.trim()) return;
     setSending(true);
     try {
-      const { Principal } = await import("@icp-sdk/core/principal");
-      const p = Principal.fromText(addInput.trim());
-      await actor.sendFriendRequest(p);
+      const uname = addInput.trim().replace(/^@/, "");
+      await actor.sendFriendRequestByUsername(uname);
       toast.success("Friend request sent!");
       setAddInput("");
     } catch {
-      toast.error("Invalid principal or request failed");
+      toast.error("User not found or request failed");
     } finally {
       setSending(false);
     }
@@ -83,6 +120,72 @@ export function FriendsPage() {
     }
   };
 
+  const openFriendPlaylists = async (p: Principal) => {
+    if (!actor) return;
+    setPlaylistModalPrincipal(p);
+    setFriendPlaylists([]);
+    setExpandedPl(new Set());
+    setLoadingPlaylists(true);
+    try {
+      const data = await actor.getFriendPlaylists(p);
+      setFriendPlaylists(data);
+    } catch {
+      toast.error("Failed to load playlists");
+    } finally {
+      setLoadingPlaylists(false);
+    }
+  };
+
+  const handlePlayAll = (pl: PlaylistView) => {
+    if (pl.tracks.length === 0) {
+      toast.info("Playlist is empty");
+      return;
+    }
+    const tracks: Track[] = pl.tracks.map((t) => ({
+      youtubeId: t.youtubeId,
+      title: t.songTitle,
+      artist: t.artistName,
+      thumbnail: `https://img.youtube.com/vi/${t.youtubeId}/mqdefault.jpg`,
+    }));
+    playTrack(tracks[0], tracks);
+    toast.success(`Playing "${pl.name}"`);
+    setPlaylistModalPrincipal(null);
+  };
+
+  const toggleExpandPl = (id: string) => {
+    setExpandedPl((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const renderIdentity = (p: Principal) => {
+    const prof = profiles[p.toString()];
+    if (prof) {
+      return (
+        <div>
+          <span className="text-sm font-medium text-foreground">
+            {prof.displayName}
+          </span>
+          <span className="ml-2 text-xs text-muted-foreground/70">
+            @{prof.username}
+          </span>
+        </div>
+      );
+    }
+    return (
+      <span className="text-sm font-mono text-muted-foreground">
+        {p.toString().slice(0, 20)}...
+      </span>
+    );
+  };
+
+  const friendModalProfile = playlistModalPrincipal
+    ? profiles[playlistModalPrincipal.toString()]
+    : null;
+
   return (
     <div className="pt-20 pb-24 min-h-screen">
       <div className="max-w-2xl mx-auto px-4">
@@ -96,13 +199,21 @@ export function FriendsPage() {
             Add a Friend
           </h3>
           <div className="flex gap-3">
-            <Input
-              value={addInput}
-              onChange={(e) => setAddInput(e.target.value)}
-              placeholder="Enter their principal ID..."
-              className="bg-input/50"
-              data-ocid="friends.input"
-            />
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 text-sm">
+                @
+              </span>
+              <Input
+                value={addInput.replace(/^@/, "")}
+                onChange={(e) => setAddInput(e.target.value)}
+                placeholder="Enter @username..."
+                className="bg-input/50 pl-7"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSendRequest();
+                }}
+                data-ocid="friends.input"
+              />
+            </div>
             <Button
               onClick={handleSendRequest}
               disabled={sending || !addInput.trim()}
@@ -148,9 +259,7 @@ export function FriendsPage() {
                         <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-sm">
                           👤
                         </div>
-                        <span className="text-sm font-mono text-muted-foreground">
-                          {p.toString().slice(0, 20)}...
-                        </span>
+                        {renderIdentity(p)}
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -190,7 +299,7 @@ export function FriendsPage() {
                 >
                   <p className="text-4xl mb-3">👥</p>
                   <p className="text-muted-foreground">
-                    No friends yet. Share your principal to connect!
+                    No friends yet. Search by @username to connect!
                   </p>
                 </div>
               ) : (
@@ -205,19 +314,29 @@ export function FriendsPage() {
                         <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center">
                           👤
                         </div>
-                        <span className="text-sm font-mono text-muted-foreground">
-                          {p.toString().slice(0, 20)}...
-                        </span>
+                        {renderIdentity(p)}
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs text-muted-foreground hover:text-destructive"
-                        onClick={() => handleUnfriend(p)}
-                        data-ocid={`friends.delete_button.${i + 1}`}
-                      >
-                        <UserMinus className="h-3 w-3 mr-1" /> Remove
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-primary hover:bg-primary/10 gap-1.5"
+                          onClick={() => openFriendPlaylists(p)}
+                          data-ocid={`friends.secondary_button.${i + 1}`}
+                        >
+                          <ListMusic className="h-3.5 w-3.5" />
+                          Playlists
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-muted-foreground hover:text-destructive"
+                          onClick={() => handleUnfriend(p)}
+                          data-ocid={`friends.delete_button.${i + 1}`}
+                        >
+                          <UserMinus className="h-3 w-3 mr-1" /> Remove
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -226,6 +345,123 @@ export function FriendsPage() {
           </>
         )}
       </div>
+
+      {/* Friend Playlists Modal */}
+      <Dialog
+        open={!!playlistModalPrincipal}
+        onOpenChange={(open) => {
+          if (!open) setPlaylistModalPrincipal(null);
+        }}
+      >
+        <DialogContent
+          className="glass border-border/30 sm:max-w-md"
+          data-ocid="friends.dialog"
+        >
+          <DialogHeader>
+            <DialogTitle className="font-display text-gradient">
+              {friendModalProfile
+                ? `${friendModalProfile.displayName}'s Playlists`
+                : "Friend's Playlists"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {loadingPlaylists ? (
+            <div
+              className="flex justify-center py-10"
+              data-ocid="friends.loading_state"
+            >
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : friendPlaylists.length === 0 ? (
+            <div className="text-center py-10" data-ocid="friends.empty_state">
+              <ListMusic className="h-10 w-10 mx-auto mb-3 text-primary/30" />
+              <p className="text-muted-foreground text-sm">No playlists yet</p>
+            </div>
+          ) : (
+            <ScrollArea className="max-h-96">
+              <div className="space-y-3 pr-2">
+                {friendPlaylists.map((pl, i) => (
+                  <div
+                    key={pl.id}
+                    className="rounded-xl border border-border/20 overflow-hidden"
+                    data-ocid={`friends.item.${i + 1}`}
+                  >
+                    <div className="flex items-center gap-3 p-3">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, oklch(0.72 0.2 295 / 0.25), oklch(0.65 0.22 350 / 0.25))",
+                        }}
+                      >
+                        <ListMusic className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-foreground truncate">
+                          {pl.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {pl.tracks.length} track
+                          {pl.tracks.length !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-primary hover:bg-primary/10 gap-1"
+                          onClick={() => handlePlayAll(pl)}
+                          data-ocid={`friends.primary_button.${i + 1}`}
+                        >
+                          <Play className="h-3 w-3" /> Play
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-muted-foreground"
+                          onClick={() => toggleExpandPl(pl.id)}
+                          data-ocid={`friends.toggle.${i + 1}`}
+                        >
+                          {expandedPl.has(pl.id) ? (
+                            <X className="h-3.5 w-3.5" />
+                          ) : (
+                            <ListMusic className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {expandedPl.has(pl.id) && pl.tracks.length > 0 && (
+                      <div className="border-t border-border/20">
+                        {pl.tracks.map((t, ti) => (
+                          <div
+                            key={`${t.youtubeId}-${ti}`}
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-primary/5 transition-colors"
+                          >
+                            <img
+                              src={`https://img.youtube.com/vi/${t.youtubeId}/mqdefault.jpg`}
+                              alt={t.songTitle}
+                              className="w-10 h-7 rounded object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-foreground truncate">
+                                {t.songTitle}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {t.artistName}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
