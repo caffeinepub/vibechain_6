@@ -41,7 +41,9 @@ export function MiniPlayer() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 glass-strong border-t border-border/30">
+    // On mobile: sit above the bottom nav (bottom-14 ≈ 56px nav height)
+    // On md+: sit at the very bottom
+    <div className="fixed bottom-14 md:bottom-0 left-0 right-0 z-40 glass-strong border-t border-border/30">
       <div
         ref={barRef}
         data-ocid="player.progress_bar"

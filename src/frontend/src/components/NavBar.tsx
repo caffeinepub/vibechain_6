@@ -17,45 +17,52 @@ export function NavBar() {
   const { clear } = useInternetIdentity();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 glass border-b border-border/30">
-      <div className="max-w-6xl mx-auto flex items-center justify-between px-4 h-14">
-        <Link
-          to="/"
-          className="flex items-center gap-2"
-          data-ocid="nav.home_link"
-        >
-          <span className="font-display font-bold text-lg text-gradient">
-            VIBECHAIN
-          </span>
-        </Link>
-        <nav className="hidden md:flex items-center gap-1">
-          {navItems.map(({ path, icon: Icon, label, ocid }) => {
-            const active = location.pathname === path;
-            return (
-              <Link key={path} to={path} data-ocid={ocid}>
-                <Button
-                  variant={active ? "secondary" : "ghost"}
-                  size="sm"
-                  className={`gap-2 ${active ? "text-primary" : "text-muted-foreground"}`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Button>
-              </Link>
-            );
-          })}
-        </nav>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground"
-          onClick={clear}
-        >
-          Sign out
-        </Button>
-      </div>
-      {/* Mobile bottom nav */}
-      <div className="fixed bottom-16 left-0 right-0 z-40 glass border-t border-border/30 flex md:hidden justify-around py-2">
+    <>
+      {/* Top header */}
+      <header className="fixed top-0 left-0 right-0 z-40 glass border-b border-border/30">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 h-14">
+          <Link
+            to="/"
+            className="flex items-center gap-2"
+            data-ocid="nav.home_link"
+          >
+            <span className="font-display font-bold text-lg text-gradient">
+              VIBECHAIN
+            </span>
+          </Link>
+          <nav className="hidden md:flex items-center gap-1">
+            {navItems.map(({ path, icon: Icon, label, ocid }) => {
+              const active = location.pathname === path;
+              return (
+                <Link key={path} to={path} data-ocid={ocid}>
+                  <Button
+                    variant={active ? "secondary" : "ghost"}
+                    size="sm"
+                    className={`gap-2 ${active ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </Button>
+                </Link>
+              );
+            })}
+          </nav>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={clear}
+          >
+            Sign out
+          </Button>
+        </div>
+      </header>
+
+      {/* Mobile bottom nav — separate fixed element */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/30 flex md:hidden justify-around py-2"
+        data-ocid="nav.mobile_bar"
+      >
         {navItems.map(({ path, icon: Icon, label, ocid }) => {
           const active = location.pathname === path;
           return (
@@ -76,7 +83,7 @@ export function NavBar() {
             </Link>
           );
         })}
-      </div>
-    </header>
+      </nav>
+    </>
   );
 }
