@@ -3,10 +3,12 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Principal } from "@icp-sdk/core/principal";
 import { useSearch } from "@tanstack/react-router";
-import { ArrowLeft, Loader2, MessageCircle, Send } from "lucide-react";
+import { ArrowLeft, Loader2, MessageCircle, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ChatMessage, UserProfile } from "../backend.d";
+import { useApp } from "../contexts/AppContext";
+import { usePlayer } from "../contexts/PlayerContext";
 import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
@@ -15,8 +17,10 @@ type ProfileMap = Record<string, UserProfile | null>;
 export function ChatPage() {
   const { actor } = useActor();
   const { identity } = useInternetIdentity();
+  const { clearUnread } = useApp();
   const myPrincipal = identity?.getPrincipal().toString();
   const search = useSearch({ strict: false }) as { with?: string };
+  const { currentTrack } = usePlayer();
 
   const [friends, setFriends] = useState<Principal[]>([]);
   const [profiles, setProfiles] = useState<ProfileMap>({});
@@ -27,9 +31,17 @@ export function ChatPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [showConvo, setShowConvo] = useState(false);
+  const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
+  const [deletingConvo, setDeletingConvo] = useState(false);
+  const [confirmDeleteConvo, setConfirmDeleteConvo] = useState(false);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clear unread notifications when visiting chat
+  useEffect(() => {
+    clearUnread();
+  }, [clearUnread]);
 
   const loadFriends = useCallback(async () => {
     if (!actor) return;
@@ -88,19 +100,26 @@ export function ChatPage() {
     };
   }, [selectedFriend, fetchMessages]);
 
+  // Scroll to bottom only when messages change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: messages is intentionally used as a trigger only
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  });
+    const el = scrollContainerRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages]);
 
   const handleSelectFriend = (p: Principal) => {
     setSelectedFriend(p);
     setMessages([]);
     setShowConvo(true);
+    setConfirmDeleteConvo(false);
   };
 
   const handleBack = () => {
     setShowConvo(false);
     setSelectedFriend(null);
+    setConfirmDeleteConvo(false);
     if (pollRef.current) clearInterval(pollRef.current);
   };
 
@@ -120,6 +139,37 @@ export function ChatPage() {
     }
   };
 
+  const handleDeleteMessage = async (msgId: string) => {
+    if (!actor || !selectedFriend) return;
+    setDeletingMsgId(msgId);
+    // Optimistic remove
+    setMessages((prev) => prev.filter((m) => m.id !== msgId));
+    try {
+      await actor.deleteMessage(msgId, selectedFriend);
+    } catch {
+      toast.error("Failed to delete message");
+      // Refetch to restore
+      await fetchMessages();
+    } finally {
+      setDeletingMsgId(null);
+    }
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!actor || !selectedFriend) return;
+    setDeletingConvo(true);
+    try {
+      await actor.deleteConversation(selectedFriend);
+      setMessages([]);
+      setConfirmDeleteConvo(false);
+      toast.success("Conversation deleted");
+    } catch {
+      toast.error("Failed to delete conversation");
+    } finally {
+      setDeletingConvo(false);
+    }
+  };
+
   const friendProfile = selectedFriend
     ? profiles[selectedFriend.toString()]
     : null;
@@ -134,9 +184,18 @@ export function ChatPage() {
     return principal.toString()[0].toUpperCase();
   };
 
+  // Account for mini player height on desktop when music is playing
+  const playerHeight = currentTrack ? "73px" : "0px";
+
   return (
-    <div className="pt-16 pb-16 md:pb-0 min-h-screen flex flex-col">
-      <div className="flex-1 max-w-5xl mx-auto w-full px-2 md:px-4 py-4 flex h-[calc(100vh-4rem)]">
+    <div
+      className="pt-16 pb-16 min-h-screen flex flex-col"
+      style={{ paddingBottom: `calc(4rem + ${playerHeight})` }}
+    >
+      <div
+        className="flex-1 max-w-5xl mx-auto w-full px-2 md:px-4 py-4 flex"
+        style={{ height: `calc(100vh - 4rem - ${playerHeight})` }}
+      >
         {/* ===== Friends Sidebar ===== */}
         <aside
           className={`
@@ -292,7 +351,7 @@ export function ChatPage() {
                   >
                     {getInitials(friendProfile ?? null, selectedFriend)}
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground">
                       {friendProfile?.displayName ??
                         `${selectedFriend.toString().slice(0, 16)}...`}
@@ -303,10 +362,67 @@ export function ChatPage() {
                       </p>
                     )}
                   </div>
+
+                  {/* Delete conversation controls */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {confirmDeleteConvo ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground hidden sm:inline">
+                          Delete all?
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleDeleteConversation}
+                          disabled={deletingConvo}
+                          data-ocid="chat.confirm_button"
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+                          style={{
+                            background: "oklch(0.45 0.2 25 / 0.9)",
+                            color: "white",
+                            border: "1px solid oklch(0.55 0.22 25 / 0.5)",
+                          }}
+                        >
+                          {deletingConvo ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            "Delete"
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteConvo(false)}
+                          disabled={deletingConvo}
+                          data-ocid="chat.cancel_button"
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+                          style={{
+                            background: "oklch(0.25 0.02 280 / 0.8)",
+                            color: "oklch(0.7 0.05 280)",
+                            border: "1px solid oklch(0.35 0.03 280 / 0.4)",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteConvo(true)}
+                        data-ocid="chat.delete_button"
+                        className="p-1.5 rounded-lg transition-all text-muted-foreground/50 hover:text-red-400/80 hover:bg-red-500/10"
+                        aria-label="Delete conversation"
+                        title="Delete entire conversation"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Messages */}
-                <ScrollArea className="flex-1 px-4 py-4">
+                <div
+                  ref={scrollContainerRef}
+                  className="flex-1 overflow-y-auto px-4 py-4"
+                >
                   {loadingMessages ? (
                     <div
                       className="flex justify-center py-8"
@@ -326,15 +442,40 @@ export function ChatPage() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {messages.map((msg) => {
+                      {messages.map((msg, idx) => {
                         const isMe = msg.from.toString() === myPrincipal;
+                        const isDeleting = deletingMsgId === msg.id;
                         return (
                           <div
                             key={msg.id}
-                            className={`flex items-end gap-2 ${
+                            className={`group flex items-end gap-2 ${
                               isMe ? "justify-end" : "justify-start"
                             }`}
                           >
+                            {/* Delete button — friend side (left) */}
+                            {!isMe && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                disabled={isDeleting}
+                                data-ocid={`chat.message.delete_button.${idx + 1}`}
+                                aria-label="Delete message"
+                                className="
+                                  opacity-100 sm:opacity-0 sm:group-hover:opacity-100
+                                  order-first self-center flex-shrink-0
+                                  p-1 rounded-md transition-all
+                                  text-muted-foreground/40 hover:text-red-400/80 hover:bg-red-500/10
+                                  disabled:opacity-30
+                                "
+                              >
+                                {isDeleting ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3" />
+                                )}
+                              </button>
+                            )}
+
                             {!isMe && (
                               <div
                                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 mb-0.5"
@@ -350,11 +491,11 @@ export function ChatPage() {
                               </div>
                             )}
                             <div
-                              className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                              className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed transition-opacity ${
                                 isMe
                                   ? "rounded-br-sm text-white"
                                   : "rounded-bl-sm text-foreground"
-                              }`}
+                              } ${isDeleting ? "opacity-40" : "opacity-100"}`}
                               style={{
                                 background: isMe
                                   ? "linear-gradient(135deg, oklch(0.72 0.2 295), oklch(0.65 0.22 350))"
@@ -375,13 +516,36 @@ export function ChatPage() {
                                 {formatTime(msg.timestamp)}
                               </p>
                             </div>
+
+                            {/* Delete button — own side (right) */}
+                            {isMe && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                disabled={isDeleting}
+                                data-ocid={`chat.message.delete_button.${idx + 1}`}
+                                aria-label="Delete message"
+                                className="
+                                  opacity-100 sm:opacity-0 sm:group-hover:opacity-100
+                                  order-last self-center flex-shrink-0
+                                  p-1 rounded-md transition-all
+                                  text-muted-foreground/40 hover:text-red-400/80 hover:bg-red-500/10
+                                  disabled:opacity-30
+                                "
+                              >
+                                {isDeleting ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3" />
+                                )}
+                              </button>
+                            )}
                           </div>
                         );
                       })}
-                      <div ref={bottomRef} />
                     </div>
                   )}
-                </ScrollArea>
+                </div>
 
                 {/* Input */}
                 <div className="px-4 py-3 border-t border-border/30">

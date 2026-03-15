@@ -482,16 +482,18 @@ export function FriendsPage() {
                                 {t.artistName}
                               </p>
                             </div>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 min-w-[1.75rem] flex-shrink-0 text-primary/70 hover:text-primary hover:bg-primary/10"
-                              title="Play from here"
-                              onClick={() => handlePlayFromTrack(pl, ti)}
-                              data-ocid={`friends.primary_button.${ti + 1}`}
-                            >
-                              <Play className="h-3.5 w-3.5" />
-                            </Button>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 min-w-[1.75rem] text-primary/70 hover:text-primary hover:bg-primary/10"
+                                title="Play from here"
+                                onClick={() => handlePlayFromTrack(pl, ti)}
+                                data-ocid={`friends.primary_button.${ti + 1}`}
+                              >
+                                <Play className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>

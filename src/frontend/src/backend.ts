@@ -158,7 +158,10 @@ export interface backendInterface {
     createPlaylist(name: string): Promise<string>;
     createProfile(displayName: string, username: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
     createVibePost(mood: Mood, youtubeId: string, songTitle: string, artistName: string, message: string | null): Promise<void>;
+    deleteConversation(friend: Principal): Promise<void>;
+    deleteMessage(messageId: string, friend: Principal): Promise<void>;
     deletePlaylist(playlistId: string): Promise<void>;
+    deleteVibePost(timestamp: bigint): Promise<void>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCircleMembers(name: string): Promise<Array<Principal>>;
@@ -316,6 +319,34 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async deleteConversation(arg0: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteConversation(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteConversation(arg0);
+            return result;
+        }
+    }
+    async deleteMessage(arg0: string, arg1: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteMessage(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteMessage(arg0, arg1);
+            return result;
+        }
+    }
     async deletePlaylist(arg0: string): Promise<void> {
         if (this.processError) {
             try {
@@ -327,6 +358,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.deletePlaylist(arg0);
+            return result;
+        }
+    }
+    async deleteVibePost(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteVibePost(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteVibePost(arg0);
             return result;
         }
     }

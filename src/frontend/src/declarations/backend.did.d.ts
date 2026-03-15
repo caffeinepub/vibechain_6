@@ -81,7 +81,10 @@ export interface _SERVICE {
     [Mood, string, string, string, [] | [string]],
     undefined
   >,
+  'deleteConversation' : ActorMethod<[Principal], undefined>,
+  'deleteMessage' : ActorMethod<[string, Principal], undefined>,
   'deletePlaylist' : ActorMethod<[string], undefined>,
+  'deleteVibePost' : ActorMethod<[bigint], undefined>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCircleMembers' : ActorMethod<[string], Array<Principal>>,

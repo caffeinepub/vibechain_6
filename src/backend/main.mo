@@ -94,6 +94,9 @@ actor {
     timestamp : Int;
   };
 
+  // 24 hours in nanoseconds
+  let TWENTY_FOUR_HOURS_NS : Int = 24 * 60 * 60 * 1_000_000_000;
+
   let profiles : Map.Map<Principal, UserProfile> = Map.empty();
   let usernames : Map.Map<Text, Principal> = Map.empty();
   let posts : Map.Map<Principal, List.List<VibePost>> = Map.empty();
@@ -362,6 +365,22 @@ actor {
     globalPosts := newGlobalPosts;
   };
 
+  // Delete the caller's own vibe post identified by its timestamp
+  public shared ({ caller }) func deleteVibePost(timestamp : Int) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can delete vibe posts");
+    };
+
+    // Remove from personal posts
+    let userPosts = getUserPostsInternal(caller);
+    let filtered = userPosts.filter(func(p) { not (p.author == caller and p.timestamp == timestamp) });
+    posts.add(caller, filtered);
+
+    // Remove from global posts
+    let filteredGlobal = globalPosts.filter(func(p) { not (p.author == caller and p.timestamp == timestamp) });
+    globalPosts := filteredGlobal;
+  };
+
   // ====== CIRCLES FUNCTIONS ======
   public shared ({ caller }) func createCircle(name : Text, themeMood : Mood) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
@@ -437,9 +456,12 @@ actor {
   };
 
   public query ({ caller }) func getPostsByMood(mood : Mood) : async [VibePost] {
+    let now = Time.now();
     let filteredPosts = List.empty<VibePost>();
     for (post in globalPosts.values()) {
-      if (post.mood == mood) { filteredPosts.add(post) };
+      if (post.mood == mood and (now - post.timestamp) <= TWENTY_FOUR_HOURS_NS) {
+        filteredPosts.add(post);
+      };
     };
     filteredPosts.toArray();
   };
@@ -461,17 +483,25 @@ actor {
   };
 
   public query ({ caller }) func getGlobalFeed() : async [VibePost] {
-    globalPosts.toArray();
+    let now = Time.now();
+    let recent = List.empty<VibePost>();
+    for (post in globalPosts.values()) {
+      if ((now - post.timestamp) <= TWENTY_FOUR_HOURS_NS) {
+        recent.add(post);
+      };
+    };
+    recent.toArray();
   };
 
   public query ({ caller }) func getFriendFeed() : async [VibePost] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view friend feed");
     };
+    let now = Time.now();
     let userFriends = getFriendsInternal(caller);
     let friendPosts = List.empty<VibePost>();
     for (post in globalPosts.values()) {
-      if (userFriends.contains(post.author)) {
+      if (userFriends.contains(post.author) and (now - post.timestamp) <= TWENTY_FOUR_HOURS_NS) {
         friendPosts.add(post);
       };
     };
@@ -639,7 +669,6 @@ actor {
     switch (playlists.get(playlistId)) {
       case (null) { Runtime.trap("Playlist not found") };
       case (?playlist) {
-        // Allow if caller is the owner OR if caller is a friend of the owner
         if (playlist.owner != caller and not isFriendsWithInternal(caller, playlist.owner)) {
           Runtime.trap("Unauthorized: Must be the owner or a friend to remove from this playlist");
         };
@@ -764,7 +793,6 @@ actor {
 
   // ====== CHAT MESSAGE FUNCTIONS ======
 
-  // Utility to generate conversation key (sorted principal texts joined by "|")
   func getConversationKey(p1 : Principal, p2 : Principal) : Text {
     let p1Text = p1.toText();
     let p2Text = p2.toText();
@@ -778,10 +806,8 @@ actor {
       Runtime.trap("Unauthorized: Only users can send messages");
     };
 
-    // Can't message yourself
     if (caller == to) { Runtime.trap("Cannot message yourself") };
 
-    // Must be friends to send message
     let userFriends = getFriendsInternal(caller);
     if (not userFriends.contains(to)) {
       Runtime.trap("Not friends with the recipient");
@@ -812,16 +838,13 @@ actor {
     messages.add(convKey, newMessages);
   };
 
-  // Get full conversation with a friend (sorted oldest first)
   public shared ({ caller }) func getConversation(friend : Principal) : async [ChatMessage] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view conversations");
     };
 
-    // Can't get conversation with yourself
     if (caller == friend) { Runtime.trap("Cannot get conversation with yourself") };
 
-    // Must be friends to view conversation
     if (not isFriendsWithInternal(caller, friend)) {
       Runtime.trap("Not friends with conversation partner");
     };
@@ -836,6 +859,62 @@ actor {
           reversed.add(msg);
         };
         reversed.toArray();
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteMessage(messageId : Text, friend : Principal) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can delete messages");
+    };
+
+    if (not isFriendsWithInternal(caller, friend)) {
+      Runtime.trap("Not friends with conversation partner");
+    };
+
+    let convKey = getConversationKey(caller, friend);
+
+    switch (messages.get(convKey)) {
+      case (null) {
+        Runtime.trap("Conversation not found");
+      };
+      case (?chatList) {
+        let maybeMessage = chatList.find(func(msg) { msg.id == messageId });
+
+        switch (maybeMessage) {
+          case (null) {
+            Runtime.trap("Message not found");
+          };
+          case (?message) {
+            if (message.from != caller and message.to != caller) {
+              Runtime.trap("Unauthorized: You must be a sender or recipient of the message");
+            };
+
+            let filteredMessages = chatList.filter(func(msg) { msg.id != messageId });
+            messages.add(convKey, filteredMessages);
+          };
+        };
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteConversation(friend : Principal) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can delete conversations");
+    };
+
+    if (not isFriendsWithInternal(caller, friend)) {
+      Runtime.trap("Not friends with conversation partner");
+    };
+
+    let convKey = getConversationKey(caller, friend);
+
+    switch (messages.get(convKey)) {
+      case (null) {
+        Runtime.trap("Conversation not found");
+      };
+      case (?_) {
+        messages.remove(convKey);
       };
     };
   };

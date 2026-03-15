@@ -9,19 +9,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Play, Plus } from "lucide-react";
+import { Loader2, Play, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { VibePost } from "../backend.d";
 import { Mood } from "../backend.d";
+import { useApp } from "../contexts/AppContext";
 import { usePlayer } from "../contexts/PlayerContext";
 import type { Track } from "../contexts/PlayerContext";
 import { useActor } from "../hooks/useActor";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   MOOD_CONFIG,
   type YTSearchResult,
   searchYouTube,
 } from "../lib/youtube";
+
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 function timeAgo(ts: bigint): string {
   const diff = Date.now() - Number(ts) / 1e6;
@@ -34,15 +38,48 @@ function timeAgo(ts: bigint): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function VibePostCard({ post, index }: { post: VibePost; index: number }) {
+function expiresIn(ts: bigint): string {
+  const postedMs = Number(ts) / 1e6;
+  const expiresMs = postedMs + TWENTY_FOUR_HOURS_MS;
+  const remaining = expiresMs - Date.now();
+  if (remaining <= 0) return "expiring soon";
+  const hrs = Math.floor(remaining / (1000 * 60 * 60));
+  const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+  if (hrs > 0) return `expires in ${hrs}h`;
+  return `expires in ${mins}m`;
+}
+
+function VibePostCard({
+  post,
+  index,
+  username,
+  isOwner,
+  onDelete,
+}: {
+  post: VibePost;
+  index: number;
+  username?: string;
+  isOwner: boolean;
+  onDelete: (ts: bigint) => void;
+}) {
   const { playTrack } = usePlayer();
   const cfg = MOOD_CONFIG[post.mood];
+  const [deleting, setDeleting] = useState(false);
 
   const track: Track = {
     youtubeId: post.youtubeId,
     title: post.songTitle,
     artist: post.artistName,
     thumbnail: `https://img.youtube.com/vi/${post.youtubeId}/mqdefault.jpg`,
+  };
+
+  const displayName = username
+    ? `@${username}`
+    : `${post.author.toString().slice(0, 8)}...`;
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    onDelete(post.timestamp);
   };
 
   return (
@@ -58,13 +95,36 @@ function VibePostCard({ post, index }: { post: VibePost; index: number }) {
           {cfg?.emoji || "🎵"}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-foreground">
-              {post.author.toString().slice(0, 8)}...
+          {/* Top row: name + time ago */}
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-sm font-medium text-foreground truncate">
+              {displayName}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground flex-shrink-0">
               {timeAgo(post.timestamp)}
             </span>
+          </div>
+          {/* Second row: expires label + delete button — always visible */}
+          <div className="flex items-center gap-1 mb-2">
+            <span className="text-xs text-muted-foreground/60 flex-shrink-0">
+              {expiresIn(post.timestamp)}
+            </span>
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-shrink-0 text-muted-foreground/50 hover:text-red-400 transition-colors p-2 rounded touch-manipulation"
+                title="Delete post"
+                data-ocid={`feed.item.delete_button.${index}`}
+              >
+                {deleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </button>
+            )}
           </div>
           {post.message && (
             <p className="text-sm text-foreground/80 mb-2">{post.message}</p>
@@ -307,9 +367,13 @@ function PostVibeDialog({ onPosted }: { onPosted: () => void }) {
 
 export function FeedPage() {
   const { actor } = useActor();
+  const { identity } = useInternetIdentity();
   const [globalFeed, setGlobalFeed] = useState<VibePost[]>([]);
   const [friendFeed, setFriendFeed] = useState<VibePost[]>([]);
   const [loading, setLoading] = useState(false);
+  const [usernames, setUsernames] = useState<Record<string, string>>({});
+
+  const myPrincipal = identity?.getPrincipal().toString();
 
   const loadFeeds = useCallback(async () => {
     if (!actor) return;
@@ -321,6 +385,27 @@ export function FeedPage() {
       ]);
       setGlobalFeed(gf);
       setFriendFeed(ff);
+
+      // Batch-fetch usernames for all unique authors
+      const allPosts = [...gf, ...ff];
+      const uniquePrincipals = [
+        ...new Map(
+          allPosts.map((p) => [p.author.toString(), p.author]),
+        ).values(),
+      ];
+      const profiles = await Promise.all(
+        uniquePrincipals.map((principal) =>
+          actor.getUserProfile(principal).catch(() => null),
+        ),
+      );
+      const map: Record<string, string> = {};
+      for (let i = 0; i < uniquePrincipals.length; i++) {
+        const profile = profiles[i];
+        if (profile) {
+          map[uniquePrincipals[i].toString()] = profile.username;
+        }
+      }
+      setUsernames(map);
     } catch {
       toast.error("Failed to load feed");
     } finally {
@@ -331,6 +416,20 @@ export function FeedPage() {
   useEffect(() => {
     loadFeeds();
   }, [loadFeeds]);
+
+  const handleDelete = useCallback(
+    async (timestamp: bigint) => {
+      if (!actor) return;
+      try {
+        await actor.deleteVibePost(timestamp);
+        toast.success("Post deleted");
+        await loadFeeds();
+      } catch {
+        toast.error("Failed to delete post");
+      }
+    },
+    [actor, loadFeeds],
+  );
 
   return (
     <div className="pt-20 pb-24 min-h-screen">
@@ -344,11 +443,15 @@ export function FeedPage() {
 
         <Tabs defaultValue="global">
           <TabsList
-            className="glass border border-border/30 mb-6"
+            className="glass border border-border/30 mb-6 w-full"
             data-ocid="feed.tab"
           >
-            <TabsTrigger value="global">Global</TabsTrigger>
-            <TabsTrigger value="friends">Friends</TabsTrigger>
+            <TabsTrigger value="global" className="flex-1">
+              Global
+            </TabsTrigger>
+            <TabsTrigger value="friends" className="flex-1">
+              Friends
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="global">
@@ -373,6 +476,9 @@ export function FeedPage() {
                     key={`${post.youtubeId}-${String(post.timestamp)}`}
                     post={post}
                     index={i + 1}
+                    username={usernames[post.author.toString()]}
+                    isOwner={post.author.toString() === myPrincipal}
+                    onDelete={handleDelete}
                   />
                 ))}
               </div>
@@ -380,7 +486,14 @@ export function FeedPage() {
           </TabsContent>
 
           <TabsContent value="friends">
-            {friendFeed.length === 0 ? (
+            {loading ? (
+              <div
+                className="flex justify-center py-12"
+                data-ocid="feed.friends.loading_state"
+              >
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : friendFeed.length === 0 ? (
               <div
                 className="text-center py-16"
                 data-ocid="feed.friends.empty_state"
@@ -397,6 +510,9 @@ export function FeedPage() {
                     key={`${post.youtubeId}-${String(post.timestamp)}`}
                     post={post}
                     index={i + 1}
+                    username={usernames[post.author.toString()]}
+                    isOwner={post.author.toString() === myPrincipal}
+                    onDelete={handleDelete}
                   />
                 ))}
               </div>

@@ -75,7 +75,10 @@ export interface backendInterface {
     createPlaylist(name: string): Promise<string>;
     createProfile(displayName: string, username: string, avatarUrl: string, currentMood: Mood, bio: string): Promise<void>;
     createVibePost(mood: Mood, youtubeId: string, songTitle: string, artistName: string, message: string | null): Promise<void>;
+    deleteConversation(friend: Principal): Promise<void>;
+    deleteMessage(messageId: string, friend: Principal): Promise<void>;
     deletePlaylist(playlistId: string): Promise<void>;
+    deleteVibePost(timestamp: bigint): Promise<void>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCircleMembers(name: string): Promise<Array<Principal>>;

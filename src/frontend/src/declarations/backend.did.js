@@ -86,7 +86,10 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'deleteConversation' : IDL.Func([IDL.Principal], [], []),
+  'deleteMessage' : IDL.Func([IDL.Text, IDL.Principal], [], []),
   'deletePlaylist' : IDL.Func([IDL.Text], [], []),
+    'deleteVibePost' : IDL.Func([IDL.Int], [], []),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getCircleMembers' : IDL.Func(
@@ -217,7 +220,10 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'deleteConversation' : IDL.Func([IDL.Principal], [], []),
+    'deleteMessage' : IDL.Func([IDL.Text, IDL.Principal], [], []),
     'deletePlaylist' : IDL.Func([IDL.Text], [], []),
+    'deleteVibePost' : IDL.Func([IDL.Int], [], []),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getCircleMembers' : IDL.Func(

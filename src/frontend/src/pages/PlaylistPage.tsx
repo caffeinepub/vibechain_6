@@ -263,47 +263,67 @@ export function PlaylistPage() {
                           {pl.tracks.map((t, ti) => (
                             <div
                               key={`${t.youtubeId}-${ti}`}
-                              className="flex items-center gap-2 px-3 sm:px-4 py-3 hover:bg-primary/5 transition-colors"
+                              className="grid px-3 sm:px-4 py-2 hover:bg-primary/5 transition-colors"
+                              style={{ gridTemplateColumns: "1fr auto" }}
                               data-ocid={`playlist.row.${ti + 1}`}
                             >
-                              {/* Thumbnail: hidden on mobile, visible sm+ */}
-                              <img
-                                src={`https://img.youtube.com/vi/${t.youtubeId}/mqdefault.jpg`}
-                                alt={t.songTitle}
-                                className="hidden sm:block w-10 h-8 sm:w-12 sm:h-9 rounded-lg object-cover flex-shrink-0"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">
-                                  {t.songTitle}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {t.artistName}
-                                </p>
+                              {/* Track info + optional thumbnail */}
+                              <div className="flex items-center gap-2 min-w-0 overflow-hidden pr-2">
+                                <img
+                                  src={`https://img.youtube.com/vi/${t.youtubeId}/mqdefault.jpg`}
+                                  alt={t.songTitle}
+                                  className="hidden sm:block w-10 h-8 rounded object-cover flex-shrink-0"
+                                />
+                                <div className="min-w-0 overflow-hidden">
+                                  <p className="text-sm font-medium text-foreground truncate">
+                                    {t.songTitle}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {t.artistName}
+                                  </p>
+                                </div>
                               </div>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-9 w-9 min-w-[2.25rem] text-primary/70 hover:text-primary hover:bg-primary/10 flex-shrink-0"
-                                onClick={() => handlePlayFromTrack(pl, ti)}
-                                title="Play from here"
-                                data-ocid={`playlist.primary_button.${ti + 1}`}
+                              {/* Action buttons — always on the right, never clipped */}
+                              <div
+                                className="flex items-center gap-1"
+                                style={{ flexShrink: 0 }}
                               >
-                                <Play className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-9 w-9 min-w-[2.25rem] text-muted-foreground/60 hover:text-destructive flex-shrink-0"
-                                onClick={() => handleRemoveTrack(pl.id, ti)}
-                                disabled={removingKey === `${pl.id}-${ti}`}
-                                data-ocid={`playlist.delete_button.${ti + 1}`}
-                              >
-                                {removingKey === `${pl.id}-${ti}` ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <X className="h-4 w-4" />
-                                )}
-                              </Button>
+                                <button
+                                  type="button"
+                                  className="flex items-center justify-center rounded-lg text-primary/70 hover:text-primary hover:bg-primary/10 transition-colors"
+                                  style={{
+                                    width: 44,
+                                    height: 44,
+                                    minWidth: 44,
+                                  }}
+                                  onClick={() => handlePlayFromTrack(pl, ti)}
+                                  title="Play from here"
+                                  data-ocid={`playlist.primary_button.${ti + 1}`}
+                                >
+                                  <Play style={{ width: 18, height: 18 }} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex items-center justify-center rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                  style={{
+                                    width: 44,
+                                    height: 44,
+                                    minWidth: 44,
+                                  }}
+                                  onClick={() => handleRemoveTrack(pl.id, ti)}
+                                  disabled={removingKey === `${pl.id}-${ti}`}
+                                  data-ocid={`playlist.delete_button.${ti + 1}`}
+                                >
+                                  {removingKey === `${pl.id}-${ti}` ? (
+                                    <Loader2
+                                      style={{ width: 16, height: 16 }}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <X style={{ width: 16, height: 16 }} />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </ScrollArea>
