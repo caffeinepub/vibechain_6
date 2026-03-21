@@ -1,4 +1,4 @@
-const YT_API_KEY = "AIzaSyAlGVdPZ4MlHiYhECRQRYPfnR7g0i6l5hE";
+const YT_API_KEY = "AIzaSyA3BcXs0hRi0a7YcgVgEYD1kepGPlwiQHw";
 
 export interface YTSearchResult {
   youtubeId: string;

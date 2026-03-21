@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/assets/fonts/BricolageGrotesque.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("/assets/fonts/Figtree.woff2") format("woff2");
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    /* Dark cosmic theme */
+    --background: 0.1 0.01 280;
+    --foreground: 0.95 0.02 280;
+    --card: 0.15 0.015 280;
+    --card-foreground: 0.95 0.02 280;
+    --popover: 0.18 0.015 280;
+    --popover-foreground: 0.95 0.02 280;
+    --primary: 0.72 0.2 295;
+    --primary-foreground: 0.98 0 0;
+    --secondary: 0.2 0.02 280;
+    --secondary-foreground: 0.85 0.02 280;
+    --muted: 0.2 0.015 280;
+    --muted-foreground: 0.55 0.03 280;
+    --accent: 0.65 0.22 310;
+    --accent-foreground: 0.98 0 0;
+    --destructive: 0.65 0.22 25;
+    --destructive-foreground: 0.98 0 0;
+    --border: 0.28 0.02 280;
+    --input: 0.22 0.02 280;
+    --ring: 0.72 0.2 295;
+    --chart-1: 0.72 0.2 295;
+    --chart-2: 0.7 0.18 200;
+    --chart-3: 0.75 0.2 60;
+    --chart-4: 0.65 0.22 25;
+    --chart-5: 0.68 0.2 150;
+    --sidebar: 0.12 0.015 280;
+    --sidebar-foreground: 0.9 0.02 280;
+    --sidebar-primary: 0.72 0.2 295;
+    --sidebar-primary-foreground: 0.98 0 0;
+    --sidebar-accent: 0.2 0.02 280;
+    --sidebar-accent-foreground: 0.9 0.02 280;
+    --sidebar-border: 0.28 0.02 280;
+    --sidebar-ring: 0.72 0.2 295;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+    background-image: radial-gradient(
+        ellipse at 20% 50%,
+        oklch(0.18 0.04 280 / 0.8) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse at 80% 20%,
+        oklch(0.15 0.04 310 / 0.6) 0%,
+        transparent 50%
+      );
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: oklch(var(--muted-foreground) / 0.3);
+    border-radius: 99px;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: oklch(var(--card) / 0.7);
+    backdrop-filter: blur(16px);
+    border: 1px solid oklch(var(--border) / 0.5);
+  }
+
+  .glass-strong {
+    background: oklch(var(--card) / 0.9);
+    backdrop-filter: blur(24px);
+    border: 1px solid oklch(var(--border) / 0.6);
+  }
+
+  .glow-purple {
+    box-shadow: 0 0 30px oklch(0.72 0.2 295 / 0.3), 0 0 60px
+      oklch(0.72 0.2 295 / 0.1);
+  }
+
+  .glow-pink {
+    box-shadow: 0 0 30px oklch(0.65 0.22 350 / 0.3), 0 0 60px
+      oklch(0.65 0.22 350 / 0.1);
+  }
+
+  .text-gradient {
+    background: linear-gradient(
+      135deg,
+      oklch(0.8 0.2 295),
+      oklch(0.75 0.22 340)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .mood-happy {
+    --mood-color: oklch(0.85 0.2 85);
+  }
+  .mood-sad {
+    --mood-color: oklch(0.55 0.18 240);
+  }
+  .mood-energetic {
+    --mood-color: oklch(0.75 0.25 35);
+  }
+  .mood-calm {
+    --mood-color: oklch(0.65 0.15 200);
+  }
+  .mood-melancholic {
+    --mood-color: oklch(0.5 0.15 260);
+  }
+  .mood-romantic {
+    --mood-color: oklch(0.65 0.22 350);
+  }
+  .mood-angry {
+    --mood-color: oklch(0.6 0.25 20);
+  }
+  .mood-chill {
+    --mood-color: oklch(0.6 0.18 180);
+  }
+}

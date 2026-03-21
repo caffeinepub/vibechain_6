@@ -5,6 +5,7 @@ import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Mood } from "../backend.d";
+import { EmotionDetector } from "../components/EmotionDetector";
 import { SongCard } from "../components/SongCard";
 import { useApp } from "../contexts/AppContext";
 import type { Track } from "../contexts/PlayerContext";
@@ -38,7 +39,9 @@ export function DashboardPage() {
 
   const handleMoodSelect = async (mood: string) => {
     setSelectedMood(mood as Mood);
-    await doSearch(MOOD_QUERIES[mood]);
+    const queries = MOOD_QUERIES as Record<string, string>;
+    const q = queries[mood] ?? `${mood} music`;
+    await doSearch(q);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -69,10 +72,19 @@ export function DashboardPage() {
             )}
           </h2>
           <p className="text-muted-foreground mt-1">
-            Choose a mood to discover music that matches your soul
+            Let us scan your face or choose a mood below
           </p>
         </div>
 
+        {/* Emotion Detector */}
+        <EmotionDetector onEmotionDetected={handleMoodSelect} />
+
+        {/* Mood grid — secondary option */}
+        <div className="mb-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+            Or choose manually
+          </p>
+        </div>
         <div className="grid grid-cols-4 md:grid-cols-8 gap-3 mb-8">
           {moods.map(([key, cfg], i) => (
             <button
@@ -149,7 +161,21 @@ export function DashboardPage() {
           <>
             <h3 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wider">
               {selectedMood
-                ? `${MOOD_CONFIG[selectedMood]?.emoji} ${MOOD_CONFIG[selectedMood]?.label} Vibes`
+                ? `${
+                    (
+                      MOOD_CONFIG as Record<
+                        string,
+                        { emoji: string; label: string }
+                      >
+                    )[selectedMood]?.emoji
+                  } ${
+                    (
+                      MOOD_CONFIG as Record<
+                        string,
+                        { emoji: string; label: string }
+                      >
+                    )[selectedMood]?.label
+                  } Vibes`
                 : "Search Results"}
               <span className="ml-2 text-primary">{results.length} tracks</span>
             </h3>

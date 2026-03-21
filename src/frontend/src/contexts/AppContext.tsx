@@ -113,9 +113,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (!actor || !identity) return;
+    if (!actor || !identity) {
+      setIsProfileFetching(false);
+      return;
+    }
     const principal = identity.getPrincipal();
-    if (principal.isAnonymous()) return;
+    if (principal.isAnonymous()) {
+      setIsProfileFetching(false);
+      return;
+    }
     setIsProfileFetching(true);
     try {
       const raw = await actor.getCallerUserProfile();
